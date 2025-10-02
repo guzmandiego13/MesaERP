@@ -23,6 +23,10 @@ export default function Settings({ company }) {
   const [showBUDialog, setShowBUDialog] = useState(false);
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [showAPIDialog, setShowAPIDialog] = useState(false);
+  const [showDeletedDialog, setShowDeletedDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showDeletedBUsDialog, setShowDeletedBUsDialog] = useState(false);
+  const [deletedBusinessUnits, setDeletedBusinessUnits] = useState([]);
   
   const [editingCompany, setEditingCompany] = useState(null);
   const [editingBU, setEditingBU] = useState(null);
