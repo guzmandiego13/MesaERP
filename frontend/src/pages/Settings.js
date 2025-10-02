@@ -117,7 +117,8 @@ export default function Settings({ company }) {
 
   useEffect(() => {
     loadData();
-  }, []);
+    loadBankStatements();
+  }, [company.id]);
 
   const loadData = async () => {
     try {
