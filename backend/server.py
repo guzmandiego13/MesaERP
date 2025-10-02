@@ -2461,10 +2461,35 @@ async def update_user(
     request: UpdateUserRequest,
     current_user: dict = Depends(get_current_user)
 ):
-    """Update user permissions or status"""
+    """Update user details, permissions, or status"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Check if user exists
+    existing_user = await db.users.find_one({"id": user_id, "tenant_id": tenant_id})
+    if not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     update_data = {}
+    
+    # Check email uniqueness if updating email
+    if request.email and request.email != existing_user["email"]:
+        email_exists = await db.users.find_one({
+            "email": request.email,
+            "tenant_id": tenant_id,
+            "id": {"$ne": user_id}
+        })
+        if email_exists:
+            raise HTTPException(status_code=400, detail="Email already in use")
+        update_data["email"] = request.email
+    
+    if request.name:
+        update_data["name"] = request.name
+    if request.role:
+        update_data["role"] = request.role
     if request.permissions:
         update_data["permissions"] = request.permissions.dict()
+    if request.location_ids is not None:
+        update_data["location_ids"] = request.location_ids
     if request.is_active is not None:
         update_data["is_active"] = request.is_active
     
