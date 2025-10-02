@@ -2081,9 +2081,8 @@ Duplicate Account,Second account with same name,Revenue,4002"""
 Missing Type Account,Account without type field"""
             
             files = {'file': ('test_invalid.csv', csv_content, 'text/csv')}
-            data = {'company_id': self.test_company_id}
             
-            response = self.session.post(f"{BASE_URL}/accounts/upload-template", files=files, data=data)
+            response = self.session.post(f"{BASE_URL}/accounts/upload-template?company_id={self.test_company_id}", files=files)
             
             if response.status_code == 200:
                 data = response.json()
