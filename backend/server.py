@@ -646,12 +646,12 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
         logger.error(f"Sync error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-async def post_sale_to_ledger(tenant_id: str, location_id: str, sale: POSSale):
+async def post_sale_to_ledger(tenant_id: str, company_id: str, business_unit_id: Optional[str], location_id: str, sale: POSSale):
     """Post POS sale to general ledger"""
-    # Find accounts
-    cash_account = await db.accounts.find_one({"tenant_id": tenant_id, "code": "1000"})
-    revenue_account = await db.accounts.find_one({"tenant_id": tenant_id, "code": "4000"})
-    tax_account = await db.accounts.find_one({"tenant_id": tenant_id, "code": "2100"})
+    # Find accounts for this company
+    cash_account = await db.accounts.find_one({"tenant_id": tenant_id, "company_id": company_id, "code": "1000"})
+    revenue_account = await db.accounts.find_one({"tenant_id": tenant_id, "company_id": company_id, "code": "4000"})
+    tax_account = await db.accounts.find_one({"tenant_id": tenant_id, "company_id": company_id, "code": "2100"})
     
     if not cash_account or not revenue_account:
         return
@@ -682,6 +682,8 @@ async def post_sale_to_ledger(tenant_id: str, location_id: str, sale: POSSale):
     
     je = JournalEntry(
         tenant_id=tenant_id,
+        company_id=company_id,
+        business_unit_id=business_unit_id,
         location_id=location_id,
         entry_date=sale.sale_date,
         description=f"POS Sale {sale.order_number}",
