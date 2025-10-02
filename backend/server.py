@@ -1776,11 +1776,20 @@ async def get_business_units(
     
     business_units = await db.business_units.find(query).to_list(1000)
     
-    # Enrich with company name
+    # Enrich with company name and parent subsidiary info
     for bu in business_units:
         bu.pop("_id", None)  # Remove MongoDB _id
+        
+        # Get company name
         company = await db.companies.find_one({"id": bu["company_id"]})
         bu["company_name"] = company["name"] if company else None
+        
+        # Get parent subsidiary name if linked
+        if bu.get("parent_subsidiary_id"):
+            parent_subsidiary = await db.companies.find_one({"id": bu["parent_subsidiary_id"]})
+            bu["parent_subsidiary_name"] = parent_subsidiary["name"] if parent_subsidiary else None
+        else:
+            bu["parent_subsidiary_name"] = None
     
     return business_units
 
