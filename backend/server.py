@@ -553,8 +553,21 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
                 })
                 
                 if not location:
+                    # Get first company for this tenant
+                    company = await db.companies.find_one({"tenant_id": tenant_id})
+                    if not company:
+                        continue  # Skip if no company found
+                    
+                    # Get first business unit for this company
+                    business_unit = await db.business_units.find_one({
+                        "tenant_id": tenant_id, 
+                        "company_id": company["id"]
+                    })
+                    
                     location = Location(
                         tenant_id=tenant_id,
+                        company_id=company["id"],
+                        business_unit_id=business_unit["id"] if business_unit else None,
                         name=store_name,
                         address=""
                     )
