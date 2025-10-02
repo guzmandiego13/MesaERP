@@ -743,6 +743,20 @@ export default function Settings({ company }) {
                               {bu.description && (
                                 <p className="text-xs text-slate-500 mt-1">{bu.description}</p>
                               )}
+                              {bu.parent_subsidiary_name && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                                    Consolidates to: {bu.parent_subsidiary_name}
+                                  </span>
+                                </div>
+                              )}
+                              {bu.consolidation_enabled === false && (
+                                <div className="flex items-center gap-1 mt-1">
+                                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                                    Consolidation Disabled
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
