@@ -1568,6 +1568,147 @@ export default function Settings({ company }) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* User Edit Dialog */}
+      <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user details and permissions
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); handleUpdateUser(editingUser); }} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Name *</Label>
+                <Input
+                  value={userForm.name}
+                  onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  value={userForm.email}
+                  onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>New Password (leave blank to keep current)</Label>
+                <Input
+                  type="password"
+                  value={userForm.password}
+                  onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                  placeholder="Leave blank to keep current password"
+                />
+              </div>
+              <div>
+                <Label>Role</Label>
+                <select
+                  value={userForm.role}
+                  onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                >
+                  <option value="Analyst">Analyst</option>
+                  <option value="Store Manager">Store Manager</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Ops">Operations</option>
+                  <option value="Owner">Owner</option>
+                </select>
+              </div>
+            </div>
+            <div className="border-t pt-4">
+              <h4 className="font-semibold mb-3">Permissions</h4>
+              <div className="max-h-64 overflow-y-auto space-y-4">
+                {Object.entries(permissionGroups).map(([groupName, permissions]) => (
+                  <div key={groupName} className="space-y-2">
+                    <h5 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-1">
+                      {groupName}
+                    </h5>
+                    <div className="space-y-2 pl-2">
+                      {permissions.map(permission => 
+                        renderPermissionCheckbox(permission.key, permission.label, permission.description)
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={handleCancelUserEdit}>
+                Cancel
+              </Button>
+              <Button type="submit">Update User</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Deleted Business Units Dialog */}
+      <Dialog open={showDeletedBUsDialog} onOpenChange={setShowDeletedBUsDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RotateCcw className="w-5 h-5 text-orange-600" />
+              Deleted Business Units
+            </DialogTitle>
+            <DialogDescription>
+              Business units deleted within the last 6 months that can be restored
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {deletedBusinessUnits.map((bu) => (
+              <div key={bu.id} className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <Briefcase className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900">{bu.name}</h4>
+                      <p className="text-sm text-slate-600">{bu.company_name} • Code: {bu.code}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Deleted: {new Date(bu.deleted_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="mb-2">
+                      <span className="text-xs font-medium text-slate-600">Days remaining:</span>
+                      <div className={`text-sm font-bold ${
+                        bu.days_remaining > 30 ? 'text-green-600' : 
+                        bu.days_remaining > 7 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {bu.days_remaining} days
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleRestoreBU(bu.id, bu.name)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-1" />
+                      Restore
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {deletedBusinessUnits.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No deleted business units available for restoration</p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
