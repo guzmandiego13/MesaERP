@@ -2,8 +2,15 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, DollarSign, ShoppingCart, Package, FileText, Settings as SettingsIcon, LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
 export default function Layout({ user, tenant, company, onLogout, onChangeCompany }) {
   const location = useLocation();
+  const [branding, setBranding] = useState(null);
 
   const navItems = [
     { path: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -13,6 +20,24 @@ export default function Layout({ user, tenant, company, onLogout, onChangeCompan
     { path: "/procurement", icon: FileText, label: "Procurement" },
     { path: "/settings", icon: SettingsIcon, label: "Settings" },
   ];
+  
+  useEffect(() => {
+    const loadBranding = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(`${API}/branding/${company.id}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setBranding(response.data);
+      } catch (error) {
+        console.error("Failed to load branding");
+      }
+    };
+    
+    if (company?.id) {
+      loadBranding();
+    }
+  }, [company]);
 
   return (
     <div className="flex h-screen bg-slate-50">
