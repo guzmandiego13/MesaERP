@@ -100,31 +100,31 @@ export default function Settings({ company }) {
     <div className="p-8 space-y-6" data-testid="settings-page">
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
-        <p className="text-slate-600 mt-1">Manage companies and business units</p>
+        <p className="text-slate-600 mt-1">Manage subsidiaries and business units for {company.name}</p>
       </div>
 
-      <Tabs defaultValue="companies" className="w-full">
+      <Tabs defaultValue="subsidiaries" className="w-full">
         <TabsList>
-          <TabsTrigger value="companies">Companies</TabsTrigger>
+          <TabsTrigger value="subsidiaries">Subsidiary Companies</TabsTrigger>
           <TabsTrigger value="business-units">Business Units</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="companies">
+        <TabsContent value="subsidiaries">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Companies & Subsidiaries</CardTitle>
+              <CardTitle>Subsidiary Companies</CardTitle>
               <Dialog open={showCompanyDialog} onOpenChange={setShowCompanyDialog}>
                 <DialogTrigger asChild>
-                  <Button data-testid="create-company">
+                  <Button data-testid="create-subsidiary">
                     <Plus className="w-4 h-4 mr-2" />
-                    New Company
+                    New Subsidiary
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Create New Company</DialogTitle>
+                    <DialogTitle>Create Subsidiary Company</DialogTitle>
                     <DialogDescription>
-                      Add a standalone company or subsidiary
+                      Add a subsidiary company under {company.name}
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleCreateCompany} className="space-y-4">
