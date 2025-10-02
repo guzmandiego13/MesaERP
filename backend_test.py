@@ -1203,12 +1203,12 @@ class BackendTester:
     def test_set_business_unit_consolidation_invalid_bu_id(self):
         """Test POST /business-units/{id}/set-consolidation with invalid business unit ID"""
         try:
-            consolidation_data = {
+            params = {
                 "consolidation_enabled": False
             }
             
             response = self.session.post(f"{BASE_URL}/business-units/invalid-id/set-consolidation", 
-                                       json=consolidation_data)
+                                       params=params)
             
             if response.status_code == 404:
                 self.log_result("Set BU Consolidation Invalid BU ID", True, "Correctly returned 404 for invalid business unit ID")
