@@ -1654,6 +1654,95 @@ async def create_business_unit(
     
     return bu_dict
 
+class UpdateBusinessUnitRequest(BaseModel):
+    name: Optional[str] = None
+    code: Optional[str] = None
+    description: Optional[str] = None
+    manager_name: Optional[str] = None
+    is_active: Optional[bool] = None
+
+@api_router.put("/business-units/{bu_id}")
+async def update_business_unit(
+    bu_id: str,
+    request: UpdateBusinessUnitRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update business unit details"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get existing BU
+    existing_bu = await db.business_units.find_one({"id": bu_id, "tenant_id": tenant_id})
+    if not existing_bu:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    update_data = {}
+    if request.name:
+        update_data["name"] = request.name
+    if request.code:
+        # Check if new code conflicts with another BU
+        conflict = await db.business_units.find_one({
+            "tenant_id": tenant_id,
+            "company_id": existing_bu["company_id"],
+            "code": request.code,
+            "id": {"$ne": bu_id}
+        })
+        if conflict:
+            raise HTTPException(status_code=400, detail="Business unit code already exists")
+        update_data["code"] = request.code
+    if request.description is not None:
+        update_data["description"] = request.description
+    if request.manager_name is not None:
+        update_data["manager_name"] = request.manager_name
+    if request.is_active is not None:
+        update_data["is_active"] = request.is_active
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = await db.business_units.update_one(
+        {"id": bu_id, "tenant_id": tenant_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    bu = await db.business_units.find_one({"id": bu_id, "tenant_id": tenant_id})
+    if bu:
+        bu.pop("_id", None)
+    return bu
+
+@api_router.delete("/business-units/{bu_id}")
+async def delete_business_unit(
+    bu_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a business unit"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Check if BU has locations
+    locations = await db.locations.count_documents({
+        "tenant_id": tenant_id,
+        "business_unit_id": bu_id
+    })
+    
+    if locations > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete business unit with {locations} locations. Reassign locations first."
+        )
+    
+    # Delete journal entries associated with this BU
+    await db.journal_entries.delete_many({"business_unit_id": bu_id})
+    
+    # Delete the business unit
+    result = await db.business_units.delete_one({"id": bu_id, "tenant_id": tenant_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    return {"success": True, "message": "Business unit deleted"}
+
 # ============================================================================
 # LOCATIONS
 # ============================================================================
