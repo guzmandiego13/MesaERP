@@ -38,6 +38,34 @@ class BackendTester:
         if details and not success:
             print(f"   Details: {details}")
     
+    def setup_tenant(self):
+        """Setup test tenant if it doesn't exist"""
+        try:
+            setup_data = {
+                "name": "Test Company",
+                "industry": "restaurant",
+                "admin_email": TEST_EMAIL,
+                "admin_password": TEST_PASSWORD,
+                "admin_name": "Test Admin",
+                "company_name": "Test Restaurant"
+            }
+            
+            response = self.session.post(f"{BASE_URL}/auth/setup", json=setup_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                self.token = data["token"]
+                self.tenant_id = data["tenant"]["id"]
+                self.session.headers.update({"Authorization": f"Bearer {self.token}"})
+                self.log_result("Setup Tenant", True, "Test tenant created successfully")
+                return True
+            else:
+                self.log_result("Setup Tenant", False, f"Setup failed with status {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_result("Setup Tenant", False, f"Setup error: {str(e)}")
+            return False
+
     def login(self):
         """Test login and get authentication token"""
         try:
@@ -54,8 +82,9 @@ class BackendTester:
                 self.log_result("Login", True, "Successfully authenticated")
                 return True
             else:
-                self.log_result("Login", False, f"Login failed with status {response.status_code}", response.text)
-                return False
+                # Try to setup tenant if login fails
+                self.log_result("Login", False, f"Login failed with status {response.status_code}, trying setup")
+                return self.setup_tenant()
         except Exception as e:
             self.log_result("Login", False, f"Login error: {str(e)}")
             return False
