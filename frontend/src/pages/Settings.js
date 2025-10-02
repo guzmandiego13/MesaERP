@@ -570,22 +570,6 @@ export default function Settings({ company }) {
     }
   };
 
-  // Update Company delete handler to use soft delete
-  const handleDeleteCompany = async (companyId) => {
-    const companyToDelete = subsidiaries.find(c => c.id === companyId);
-    if (!window.confirm(`Are you sure you want to delete "${companyToDelete?.name}"? This action will backup the data for 6 months and allow restoration.`)) {
-      return;
-    }
-    
-    try {
-      await axios.post(`${API}/companies/${companyId}/soft-delete`, {}, { headers });
-      toast.success("Subsidiary deleted and backed up for 6 months");
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to delete subsidiary");
-    }
-  };
-
   return (
     <div className="p-8 space-y-6" data-testid="settings-page">
       <div>
