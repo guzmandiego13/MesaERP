@@ -262,6 +262,106 @@ export default function Settings({ company }) {
     }
   };
 
+  // Company (subsidiary) edit handlers
+  const handleEditCompany = (companyId) => {
+    const companyToEdit = subsidiaries.find(c => c.id === companyId);
+    if (companyToEdit) {
+      setEditingCompany(companyId);
+      setCompanyForm({
+        name: companyToEdit.name,
+        industry: companyToEdit.industry,
+        tax_id: companyToEdit.tax_id || "",
+        accounting_basis: companyToEdit.accounting_basis
+      });
+    }
+  };
+
+  const handleUpdateCompany = async (companyId) => {
+    try {
+      await axios.put(`${API}/companies/${companyId}`, companyForm, { headers });
+      toast.success("Subsidiary updated successfully");
+      setEditingCompany(null);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update subsidiary");
+    }
+  };
+
+  const handleDeleteCompany = async (companyId) => {
+    const companyToDelete = subsidiaries.find(c => c.id === companyId);
+    if (!window.confirm(`Are you sure you want to delete "${companyToDelete?.name}"? This action cannot be undone and will delete all associated data.`)) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/companies/${companyId}`, { headers });
+      toast.success("Subsidiary deleted successfully");
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete subsidiary");
+    }
+  };
+
+  const handleCancelCompanyEdit = () => {
+    setEditingCompany(null);
+    setCompanyForm({
+      name: "",
+      industry: "restaurant",
+      tax_id: "",
+      accounting_basis: "Accrual"
+    });
+  };
+
+  // Business Unit edit handlers
+  const handleEditBU = (buId) => {
+    const buToEdit = businessUnits.find(bu => bu.id === buId);
+    if (buToEdit) {
+      setEditingBU(buId);
+      setBUForm({
+        name: buToEdit.name,
+        code: buToEdit.code,
+        description: buToEdit.description || "",
+        manager_name: buToEdit.manager_name || ""
+      });
+    }
+  };
+
+  const handleUpdateBU = async (buId) => {
+    try {
+      await axios.put(`${API}/business-units/${buId}`, buForm, { headers });
+      toast.success("Business unit updated successfully");
+      setEditingBU(null);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update business unit");
+    }
+  };
+
+  const handleDeleteBU = async (buId) => {
+    const buToDelete = businessUnits.find(bu => bu.id === buId);
+    if (!window.confirm(`Are you sure you want to delete "${buToDelete?.name}"? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      await axios.delete(`${API}/business-units/${buId}`, { headers });
+      toast.success("Business unit deleted successfully");
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete business unit");
+    }
+  };
+
+  const handleCancelBUEdit = () => {
+    setEditingBU(null);
+    setBUForm({
+      name: "",
+      code: "",
+      description: "",
+      manager_name: ""
+    });
+  };
+
   return (
     <div className="p-8 space-y-6" data-testid="settings-page">
       <div>
