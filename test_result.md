@@ -135,6 +135,18 @@ backend:
           agent: "testing"
           comment: "Comprehensive soft delete testing completed successfully. Fixed timezone comparison issues in restore and get_deleted_companies endpoints. All 18 backend tests passed including 9 new soft delete tests: 1) Soft delete creates backup with 6-month restoration deadline, 2) Prevents soft delete of companies with active subsidiaries, 3) GET /companies correctly excludes soft-deleted companies, 4) GET /companies/deleted lists restorable companies with restoration info, 5) Restore functionality works correctly and reactivates company, 6) Proper validation prevents restoring non-deleted companies, 7) Prevents double soft delete, 8) Handles invalid company IDs correctly (404), 9) All endpoints have proper error handling and response formats. Backup data includes business_units, locations, accounts, api_keys, branding, and journal_entries as specified."
 
+  - task: "Business unit consolidation backend endpoints and data model"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Enhanced BusinessUnit model with parent_subsidiary_id and consolidation_enabled fields. Added consolidation API endpoints: GET /business-units/{id}/consolidation (individual BU analysis), GET /companies/{id}/consolidated-report (subsidiary rollup), POST /business-units/{id}/set-consolidation (update settings). Updated business unit CRUD to handle consolidation fields with proper validation."
+
 frontend:
   - task: "Inline edit/delete for subsidiaries in Settings page"
     implemented: true
