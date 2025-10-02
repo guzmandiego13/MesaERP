@@ -1772,7 +1772,7 @@ async def update_branding(
     current_user: dict = Depends(get_current_user)
 ):
     """Update company branding"""
-    update_data = {}
+    update_data = {"company_id": company_id}
     if request.logo_url is not None:
         update_data["logo_url"] = request.logo_url
     if request.primary_color:
@@ -1785,13 +1785,15 @@ async def update_branding(
     update_data["updated_at"] = datetime.now(timezone.utc)
     
     # Upsert
-    result = await db.company_branding.update_one(
+    await db.company_branding.update_one(
         {"company_id": company_id},
         {"$set": update_data},
         upsert=True
     )
     
     branding = await db.company_branding.find_one({"company_id": company_id})
+    if branding:
+        branding.pop("_id", None)
     return branding
 
 # ============================================================================
