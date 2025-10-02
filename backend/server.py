@@ -287,6 +287,25 @@ class CreateBusinessUnitRequest(BaseModel):
     description: Optional[str] = None
     manager_name: Optional[str] = None
 
+class CreateUserRequest(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+    role: RoleEnum
+    permissions: UserPermissions
+
+class UpdateBrandingRequest(BaseModel):
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
+    accent_color: Optional[str] = None
+
+class CreateAPIKeyRequest(BaseModel):
+    name: str
+    service_type: str
+    api_key: str
+    api_secret: Optional[str] = None
+
 class BankTransactionImport(BaseModel):
     date: str
     description: str
