@@ -1491,7 +1491,9 @@ async def create_company(
         tax_id=request.tax_id,
         accounting_basis=request.accounting_basis
     )
-    await db.companies.insert_one(company.dict())
+    
+    company_dict = company.dict()
+    await db.companies.insert_one(company_dict)
     
     # Create default chart of accounts for new company
     coa_template = get_coa_template(request.industry)
@@ -1505,7 +1507,8 @@ async def create_company(
         )
         await db.accounts.insert_one(account.dict())
     
-    return company
+    company_dict.pop("_id", None)
+    return company_dict
 
 # ============================================================================
 # BUSINESS UNIT MANAGEMENT
