@@ -186,6 +186,8 @@ class InventoryMovement(BaseModel):
 class POSSale(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     tenant_id: str
+    company_id: str
+    business_unit_id: Optional[str] = None
     location_id: str
     parrot_order_id: str
     order_number: str
