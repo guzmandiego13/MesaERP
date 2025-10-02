@@ -1732,6 +1732,185 @@ export default function Settings({ company }) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* CSV Imports Tab */}
+        <TabsContent value="csv-imports">
+          <div className="space-y-6">
+            {/* Accounts Template Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Account Setup Template
+                </CardTitle>
+                <CardDescription>
+                  Download template, add account names and descriptions, then upload to create accounts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold mb-3">Step 1: Download Template</h4>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Download the accounts template CSV with columns: account_name, description, account_type, account_code
+                    </p>
+                    <Button onClick={downloadAccountsTemplate} variant="outline">
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Accounts Template
+                    </Button>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-3">Step 2: Upload Completed Template</h4>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Upload your completed template to automatically create accounts in the system
+                    </p>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleAccountsTemplateUpload}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                      <Button variant="default" disabled={uploading} asChild>
+                        <span>
+                          <UploadIcon className="w-4 h-4 mr-2" />
+                          {uploading ? "Uploading..." : "Upload Accounts CSV"}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Cash Flows Template Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Cash Flows Template
+                </CardTitle>
+                <CardDescription>
+                  Upload cash flows not reflected in bank statements (cash payments, etc.)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-semibold mb-3">Step 1: Download Template</h4>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Template includes: invoice_id, accrual_date, cashflow_date, account_name, supplier_name, description, payment_method, amount, expense_type
+                    </p>
+                    <Button onClick={downloadCashFlowsTemplate} variant="outline">
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Cash Flows Template
+                    </Button>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold mb-3">Step 2: Upload Cash Flows</h4>
+                    <p className="text-sm text-slate-600 mb-4">
+                      Upload completed template to create journal entries for non-bank transactions
+                    </p>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleCashFlowsTemplateUpload}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                      <Button variant="default" disabled={uploading} asChild>
+                        <span>
+                          <UploadIcon className="w-4 h-4 mr-2" />
+                          {uploading ? "Uploading..." : "Upload Cash Flows CSV"}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Bank Statement Upload Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Bank Statement Upload & Categorization
+                </CardTitle>
+                <CardDescription>
+                  Upload bank statements CSV and categorize transactions into account lines
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold mb-3">Upload Bank Statement</h4>
+                    <p className="text-sm text-slate-600 mb-4">
+                      CSV should contain columns: date, description, amount (and optionally type)
+                    </p>
+                    <label className="cursor-pointer">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        onChange={handleBankStatementUpload}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                      <Button disabled={uploading} asChild>
+                        <span>
+                          <UploadIcon className="w-4 h-4 mr-2" />
+                          {uploading ? "Uploading..." : "Upload Bank Statement"}
+                        </span>
+                      </Button>
+                    </label>
+                  </div>
+
+                  {/* Bank Statements List */}
+                  {bankStatements.length > 0 && (
+                    <div className="border rounded-lg p-4">
+                      <h4 className="font-semibold mb-3">Uploaded Bank Statements</h4>
+                      <div className="space-y-2">
+                        {bankStatements.map((statement) => (
+                          <div key={statement.id} className="flex items-center justify-between p-3 border border-slate-200 rounded">
+                            <div>
+                              <h5 className="font-medium">{statement.upload_filename}</h5>
+                              <p className="text-sm text-slate-600">
+                                {statement.total_transactions} transactions • 
+                                {statement.categorized_transactions} categorized • 
+                                Uploaded: {new Date(statement.upload_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                onClick={() => loadBankTransactions(statement.id)}
+                                variant="outline"
+                              >
+                                Categorize Transactions
+                              </Button>
+                              {statement.categorized_transactions > 0 && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => createJournalEntriesFromBankTransactions(statement.id)}
+                                >
+                                  Create Journal Entries
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
 
       {/* User Edit Dialog */}
