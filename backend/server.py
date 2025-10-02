@@ -608,16 +608,23 @@ async def get_accounts(current_user: dict = Depends(get_current_user)):
     accounts = await db.accounts.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
     return accounts
 
+class CreateAccountRequest(BaseModel):
+    code: str
+    name: str
+    account_type: AccountTypeEnum
+    parent_id: Optional[str] = None
+
 @api_router.post("/finance/accounts")
 async def create_account(
-    code: str,
-    name: str,
-    account_type: AccountTypeEnum,
-    parent_id: Optional[str] = None,
+    request: CreateAccountRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new account"""
     tenant_id = current_user["tenant_id"]
+    code = request.code
+    name = request.name
+    account_type = request.account_type
+    parent_id = request.parent_id
     
     # Check if code already exists
     existing = await db.accounts.find_one({"tenant_id": tenant_id, "code": code})
