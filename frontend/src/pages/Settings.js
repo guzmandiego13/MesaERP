@@ -26,6 +26,7 @@ export default function Settings({ company }) {
   
   const [editingCompany, setEditingCompany] = useState(null);
   const [editingBU, setEditingBU] = useState(null);
+  const [editingUser, setEditingUser] = useState(null);
 
   const [companyForm, setCompanyForm] = useState({
     name: "",
