@@ -696,8 +696,16 @@ async def post_sale_to_ledger(tenant_id: str, location_id: str, sale: POSSale):
 # ============================================================================
 
 @api_router.get("/finance/accounts")
-async def get_accounts(current_user: dict = Depends(get_current_user)):
-    accounts = await db.accounts.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
+async def get_accounts(
+    company_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get accounts, optionally filtered by company"""
+    query = {"tenant_id": current_user["tenant_id"]}
+    if company_id:
+        query["company_id"] = company_id
+    
+    accounts = await db.accounts.find(query).to_list(1000)
     return accounts
 
 class CreateAccountRequest(BaseModel):
