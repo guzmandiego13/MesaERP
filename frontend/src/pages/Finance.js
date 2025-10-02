@@ -383,6 +383,7 @@ export default function Finance() {
           <TabsTrigger value="pl" data-testid="tab-pl">Profit & Loss</TabsTrigger>
           <TabsTrigger value="bs" data-testid="tab-bs">Balance Sheet</TabsTrigger>
           <TabsTrigger value="coa" data-testid="tab-coa">Chart of Accounts</TabsTrigger>
+          <TabsTrigger value="journal" data-testid="tab-journal">Journal Entries</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pl">
