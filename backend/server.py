@@ -1833,13 +1833,17 @@ async def create_api_key(
         api_secret=request.api_secret
     )
     
-    await db.api_keys.insert_one(api_key.dict())
+    api_key_dict = api_key.dict()
+    await db.api_keys.insert_one(api_key_dict)
     
     # Return masked version
-    api_key_dict = api_key.dict()
-    api_key_dict["api_key_masked"] = "*" * (len(request.api_key) - 4) + request.api_key[-4:]
-    api_key_dict.pop("api_key")
-    api_key_dict.pop("api_secret")
+    api_key_dict.pop("_id", None)
+    if len(request.api_key) > 4:
+        api_key_dict["api_key_masked"] = "*" * (len(request.api_key) - 4) + request.api_key[-4:]
+    else:
+        api_key_dict["api_key_masked"] = "****"
+    api_key_dict.pop("api_key", None)
+    api_key_dict.pop("api_secret", None)
     
     return api_key_dict
 
