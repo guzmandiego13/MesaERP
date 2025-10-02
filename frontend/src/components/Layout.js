@@ -11,6 +11,7 @@ export default function Layout({ user, tenant, onLogout }) {
     { path: "/sales", icon: ShoppingCart, label: "Sales" },
     { path: "/inventory", icon: Package, label: "Inventory" },
     { path: "/procurement", icon: FileText, label: "Procurement" },
+    { path: "/settings", icon: SettingsIcon, label: "Settings" },
   ];
 
   return (
