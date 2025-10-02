@@ -1999,9 +1999,8 @@ Test Expense Account,Test expense account for CSV import,Expense,6001"""
             
             # Create file-like object
             files = {'file': ('test_accounts.csv', csv_content, 'text/csv')}
-            data = {'company_id': self.test_company_id}
             
-            response = self.session.post(f"{BASE_URL}/accounts/upload-template", files=files, data=data)
+            response = self.session.post(f"{BASE_URL}/accounts/upload-template?company_id={self.test_company_id}", files=files)
             
             if response.status_code == 200:
                 data = response.json()
