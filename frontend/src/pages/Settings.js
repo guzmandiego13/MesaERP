@@ -12,8 +12,8 @@ import { Plus, Building2, Briefcase } from "lucide-react";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-export default function Settings() {
-  const [companies, setCompanies] = useState([]);
+export default function Settings({ company }) {
+  const [subsidiaries, setSubsidiaries] = useState([]);
   const [businessUnits, setBusinessUnits] = useState([]);
   const [showCompanyDialog, setShowCompanyDialog] = useState(false);
   const [showBUDialog, setShowBUDialog] = useState(false);
@@ -21,7 +21,6 @@ export default function Settings() {
   const [companyForm, setCompanyForm] = useState({
     name: "",
     industry: "restaurant",
-    parent_company_id: "",
     tax_id: "",
     accounting_basis: "Accrual"
   });
