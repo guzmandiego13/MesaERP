@@ -44,18 +44,40 @@ export default function Layout({ user, tenant, company, onLogout, onChangeCompan
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 border-b border-slate-200">
-          <h1 className="text-2xl font-bold text-slate-900">MesaERP</h1>
+          {/* Company Logo */}
+          {branding?.logo_url ? (
+            <div className="mb-3">
+              <img 
+                src={branding.logo_url} 
+                alt={`${company?.name} logo`}
+                className="h-12 object-contain"
+                onError={(e) => e.target.style.display = 'none'}
+              />
+            </div>
+          ) : (
+            <h1 className="text-2xl font-bold text-slate-900">MesaERP</h1>
+          )}
+          
           <div className="mt-3 space-y-2">
             <div className="flex items-center gap-2 text-sm text-slate-600">
               <Building2 className="w-4 h-4" />
               <span className="font-medium">{tenant?.name}</span>
             </div>
-            <div className="p-2 bg-blue-50 rounded-md">
+            <div 
+              className="p-2 rounded-md"
+              style={{ backgroundColor: branding?.primary_color ? `${branding.primary_color}15` : '#eff6ff' }}
+            >
               <p className="text-xs text-slate-600">Current Company:</p>
-              <p className="font-semibold text-blue-900 text-sm">{company?.name}</p>
+              <p 
+                className="font-semibold text-sm"
+                style={{ color: branding?.primary_color || '#1e40af' }}
+              >
+                {company?.name}
+              </p>
               <button
                 onClick={onChangeCompany}
-                className="text-xs text-blue-600 hover:text-blue-700 underline mt-1"
+                className="text-xs underline mt-1 hover:opacity-80"
+                style={{ color: branding?.primary_color || '#2563eb' }}
                 data-testid="change-company-button"
               >
                 Change Company
