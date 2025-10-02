@@ -323,7 +323,9 @@ export default function Settings({ company }) {
         name: buToEdit.name,
         code: buToEdit.code,
         description: buToEdit.description || "",
-        manager_name: buToEdit.manager_name || ""
+        manager_name: buToEdit.manager_name || "",
+        parent_subsidiary_id: buToEdit.parent_subsidiary_id || "",
+        consolidation_enabled: buToEdit.consolidation_enabled !== false
       });
     }
   };
