@@ -1340,12 +1340,158 @@ async def get_sales_chart(
     return chart_data
 
 # ============================================================================
+# COMPANY MANAGEMENT
+# ============================================================================
+
+@api_router.get("/companies")
+async def get_companies(current_user: dict = Depends(get_current_user)):
+    """Get all companies for the tenant"""
+    companies = await db.companies.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
+    
+    # Enrich with subsidiary count
+    for company in companies:
+        subsidiary_count = await db.companies.count_documents({
+            "tenant_id": current_user["tenant_id"],
+            "parent_company_id": company["id"]
+        })
+        company["subsidiary_count"] = subsidiary_count
+        
+        # Get parent company name if it's a subsidiary
+        if company.get("parent_company_id"):
+            parent = await db.companies.find_one({"id": company["parent_company_id"]})
+            company["parent_company_name"] = parent["name"] if parent else None
+    
+    return companies
+
+@api_router.post("/companies")
+async def create_company(
+    request: CreateCompanyRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new company or subsidiary"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Verify parent company if specified
+    if request.parent_company_id:
+        parent = await db.companies.find_one({
+            "id": request.parent_company_id,
+            "tenant_id": tenant_id
+        })
+        if not parent:
+            raise HTTPException(status_code=404, detail="Parent company not found")
+    
+    company = Company(
+        tenant_id=tenant_id,
+        name=request.name,
+        industry=request.industry,
+        parent_company_id=request.parent_company_id,
+        tax_id=request.tax_id,
+        accounting_basis=request.accounting_basis
+    )
+    await db.companies.insert_one(company.dict())
+    
+    # Create default chart of accounts for new company
+    coa_template = get_coa_template(request.industry)
+    for acc in coa_template:
+        account = Account(
+            tenant_id=tenant_id,
+            company_id=company.id,
+            code=acc["code"],
+            name=acc["name"],
+            account_type=AccountTypeEnum(acc["type"])
+        )
+        await db.accounts.insert_one(account.dict())
+    
+    return company
+
+# ============================================================================
+# BUSINESS UNIT MANAGEMENT
+# ============================================================================
+
+@api_router.get("/business-units")
+async def get_business_units(
+    company_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get business units, optionally filtered by company"""
+    query = {"tenant_id": current_user["tenant_id"]}
+    if company_id:
+        query["company_id"] = company_id
+    
+    business_units = await db.business_units.find(query).to_list(1000)
+    
+    # Enrich with company name
+    for bu in business_units:
+        company = await db.companies.find_one({"id": bu["company_id"]})
+        bu["company_name"] = company["name"] if company else None
+    
+    return business_units
+
+@api_router.post("/business-units")
+async def create_business_unit(
+    request: CreateBusinessUnitRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new business unit"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Verify company exists
+    company = await db.companies.find_one({
+        "id": request.company_id,
+        "tenant_id": tenant_id
+    })
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Check if code already exists
+    existing = await db.business_units.find_one({
+        "tenant_id": tenant_id,
+        "company_id": request.company_id,
+        "code": request.code
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="Business unit code already exists")
+    
+    business_unit = BusinessUnit(
+        tenant_id=tenant_id,
+        company_id=request.company_id,
+        name=request.name,
+        code=request.code,
+        description=request.description,
+        manager_name=request.manager_name
+    )
+    await db.business_units.insert_one(business_unit.dict())
+    
+    return business_unit
+
+# ============================================================================
 # LOCATIONS
 # ============================================================================
 
 @api_router.get("/locations")
-async def get_locations(current_user: dict = Depends(get_current_user)):
-    locations = await db.locations.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
+async def get_locations(
+    company_id: Optional[str] = None,
+    business_unit_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get locations, optionally filtered by company or business unit"""
+    query = {"tenant_id": current_user["tenant_id"]}
+    if company_id:
+        query["company_id"] = company_id
+    if business_unit_id:
+        query["business_unit_id"] = business_unit_id
+    
+    locations = await db.locations.find(query).to_list(1000)
+    
+    # Enrich with company and BU names
+    for loc in locations:
+        company = await db.companies.find_one({"id": loc["company_id"]})
+        loc["company_name"] = company["name"] if company else None
+        
+        if loc.get("business_unit_id"):
+            bu = await db.business_units.find_one({"id": loc["business_unit_id"]})
+            loc["business_unit_name"] = bu["name"] if bu else None
+    
     return locations
 
 # ============================================================================
