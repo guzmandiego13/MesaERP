@@ -187,54 +187,33 @@ export default function Settings({ company }) {
               </Dialog>
             </CardHeader>
             <CardContent>
-              {companies.length > 0 ? (
-                <div className="space-y-4">
-                  {/* Parent Companies */}
-                  {parentCompanies.map((company) => (
-                    <div key={company.id} className="border border-slate-200 rounded-lg p-4">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Building2 className="w-8 h-8 text-blue-600" />
-                          <div>
-                            <h3 className="text-lg font-semibold text-slate-900">{company.name}</h3>
-                            <p className="text-sm text-slate-600 capitalize">{company.industry}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-xs font-medium text-slate-600">
-                            {company.subsidiary_count} Subsidiaries
-                          </span>
-                          {company.tax_id && (
-                            <p className="text-xs text-slate-500 mt-1">Tax ID: {company.tax_id}</p>
+              {subsidiaries.length > 0 ? (
+                <div className="space-y-3">
+                  {subsidiaries.map((sub) => (
+                    <div key={sub.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <Building2 className="w-8 h-8 text-indigo-600" />
+                        <div>
+                          <h3 className="font-semibold text-slate-900">{sub.name}</h3>
+                          <p className="text-sm text-slate-600 capitalize">{sub.industry}</p>
+                          {sub.tax_id && (
+                            <p className="text-xs text-slate-500 mt-1">Tax ID: {sub.tax_id}</p>
                           )}
                         </div>
                       </div>
-
-                      {/* Subsidiaries */}
-                      {companies.filter(c => c.parent_company_id === company.id).length > 0 && (
-                        <div className="ml-12 mt-3 space-y-2">
-                          <p className="text-xs font-medium text-slate-600 uppercase">Subsidiaries:</p>
-                          {companies
-                            .filter(c => c.parent_company_id === company.id)
-                            .map((sub) => (
-                              <div key={sub.id} className="flex items-center gap-2 p-2 bg-slate-50 rounded">
-                                <Building2 className="w-5 h-5 text-slate-400" />
-                                <div className="flex-1">
-                                  <p className="text-sm font-medium text-slate-900">{sub.name}</p>
-                                  <p className="text-xs text-slate-500 capitalize">{sub.industry}</p>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
+                      <div className="text-right">
+                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                          Subsidiary
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-12">
                   <Building2 className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                  <p className="text-slate-500">No companies yet</p>
-                  <p className="text-sm text-slate-400 mt-2">Create your first company to get started</p>
+                  <p className="text-slate-500">No subsidiary companies yet</p>
+                  <p className="text-sm text-slate-400 mt-2">Create subsidiaries under {company.name}</p>
                 </div>
               )}
             </CardContent>
