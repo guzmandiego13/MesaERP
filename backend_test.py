@@ -1181,13 +1181,13 @@ class BackendTester:
             return False
         
         try:
-            consolidation_data = {
+            params = {
                 "parent_subsidiary_id": "invalid-subsidiary-id",
                 "consolidation_enabled": True
             }
             
             response = self.session.post(f"{BASE_URL}/business-units/{self.test_bu_id}/set-consolidation", 
-                                       json=consolidation_data)
+                                       params=params)
             
             if response.status_code == 404:
                 self.log_result("Set BU Consolidation Invalid Parent", True, "Correctly returned 404 for invalid parent subsidiary")
