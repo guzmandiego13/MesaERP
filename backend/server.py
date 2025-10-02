@@ -614,6 +614,8 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
                     # Create POS sale
                     sale = POSSale(
                         tenant_id=tenant_id,
+                        company_id=location.get("company_id", ""),
+                        business_unit_id=location.get("business_unit_id"),
                         location_id=location["id"],
                         parrot_order_id=order_uuid,
                         order_number=order.get("orderReference", ""),
