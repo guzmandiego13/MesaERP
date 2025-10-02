@@ -172,6 +172,18 @@ frontend:
           agent: "main"
           comment: "Added comprehensive company management: inline editing, soft delete with double confirmation, 6-month backup, restoration functionality, and deleted companies view"
 
+  - task: "Business unit consolidation linkage to parent subsidiaries"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/pages/Settings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Enhanced business units with parent subsidiary consolidation settings: added parent_subsidiary_id field, consolidation_enabled toggle, visual indicators for consolidation status, and dropdown selection in create/edit forms"
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
