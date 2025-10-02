@@ -1695,6 +1695,10 @@ async def restore_company(
     
     # Check if restoration deadline has passed (6 months)
     delete_time = company["deleted_at"]
+    # Ensure delete_time is timezone-aware
+    if delete_time.tzinfo is None:
+        delete_time = delete_time.replace(tzinfo=timezone.utc)
+    
     restoration_deadline = delete_time.replace(month=delete_time.month + 6) if delete_time.month <= 6 else delete_time.replace(year=delete_time.year + 1, month=delete_time.month - 6)
     
     if datetime.now(timezone.utc) > restoration_deadline:
