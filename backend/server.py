@@ -2448,7 +2448,11 @@ async def create_user(
     return user_dict
 
 class UpdateUserRequest(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    role: Optional[RoleEnum] = None
     permissions: Optional[UserPermissions] = None
+    location_ids: Optional[List[str]] = None
     is_active: Optional[bool] = None
 
 @api_router.put("/users/{user_id}")
