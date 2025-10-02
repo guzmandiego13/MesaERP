@@ -800,6 +800,453 @@ class BackendTester:
         except Exception as e:
             self.log_result("Restore Invalid ID", False, f"Error: {str(e)}")
             return False
+
+    # ============================================================================
+    # BUSINESS UNIT CONSOLIDATION TESTS
+    # ============================================================================
+
+    def test_create_business_unit_with_consolidation(self):
+        """Test creating business unit with consolidation settings"""
+        if not self.test_company_id:
+            self.log_result("Create BU with Consolidation", False, "No test company ID available")
+            return False
+        
+        try:
+            # Create a subsidiary company to use as parent subsidiary
+            subsidiary_data = {
+                "name": "Parent Subsidiary for Consolidation Test",
+                "industry": "restaurant",
+                "parent_company_id": self.test_company_id
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=subsidiary_data)
+            
+            if response.status_code != 200:
+                self.log_result("Create BU with Consolidation", False, "Failed to create parent subsidiary")
+                return False
+            
+            parent_subsidiary = response.json()
+            parent_subsidiary_id = parent_subsidiary["id"]
+            
+            # Create business unit with consolidation settings
+            bu_data = {
+                "company_id": self.test_company_id,
+                "name": "Consolidation Test BU",
+                "code": "BU-CONSOL-TEST",
+                "description": "Business unit for consolidation testing",
+                "manager_name": "Test Manager",
+                "parent_subsidiary_id": parent_subsidiary_id,
+                "consolidation_enabled": True
+            }
+            
+            response = self.session.post(f"{BASE_URL}/business-units", json=bu_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify consolidation fields are set correctly
+                if (data.get("parent_subsidiary_id") == parent_subsidiary_id and 
+                    data.get("consolidation_enabled") == True):
+                    
+                    # Clean up
+                    self.session.delete(f"{BASE_URL}/business-units/{data['id']}")
+                    self.session.delete(f"{BASE_URL}/companies/{parent_subsidiary_id}")
+                    
+                    self.log_result("Create BU with Consolidation", True, "Business unit created with consolidation settings")
+                    return True
+                else:
+                    self.log_result("Create BU with Consolidation", False, "Consolidation fields not set correctly", data)
+                    return False
+            else:
+                # Clean up subsidiary
+                self.session.delete(f"{BASE_URL}/companies/{parent_subsidiary_id}")
+                self.log_result("Create BU with Consolidation", False, f"BU creation failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Create BU with Consolidation", False, f"Error: {str(e)}")
+            return False
+
+    def test_create_business_unit_invalid_parent_subsidiary(self):
+        """Test creating business unit with invalid parent subsidiary ID"""
+        if not self.test_company_id:
+            self.log_result("Create BU Invalid Parent Subsidiary", False, "No test company ID available")
+            return False
+        
+        try:
+            bu_data = {
+                "company_id": self.test_company_id,
+                "name": "Invalid Parent Test BU",
+                "code": "BU-INVALID-PARENT",
+                "parent_subsidiary_id": "invalid-subsidiary-id",
+                "consolidation_enabled": True
+            }
+            
+            response = self.session.post(f"{BASE_URL}/business-units", json=bu_data)
+            
+            if response.status_code == 404:
+                self.log_result("Create BU Invalid Parent Subsidiary", True, "Correctly returned 404 for invalid parent subsidiary")
+                return True
+            else:
+                self.log_result("Create BU Invalid Parent Subsidiary", False, f"Expected 404, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Create BU Invalid Parent Subsidiary", False, f"Error: {str(e)}")
+            return False
+
+    def test_update_business_unit_consolidation(self):
+        """Test updating business unit consolidation settings"""
+        if not self.test_bu_id:
+            self.log_result("Update BU Consolidation", False, "No test business unit ID available")
+            return False
+        
+        try:
+            # Create a subsidiary company to use as parent subsidiary
+            subsidiary_data = {
+                "name": "Parent Subsidiary for Update Test",
+                "industry": "restaurant"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=subsidiary_data)
+            
+            if response.status_code != 200:
+                self.log_result("Update BU Consolidation", False, "Failed to create parent subsidiary")
+                return False
+            
+            parent_subsidiary = response.json()
+            parent_subsidiary_id = parent_subsidiary["id"]
+            
+            # Update business unit with consolidation settings
+            update_data = {
+                "parent_subsidiary_id": parent_subsidiary_id,
+                "consolidation_enabled": True
+            }
+            
+            response = self.session.put(f"{BASE_URL}/business-units/{self.test_bu_id}", json=update_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify consolidation fields are updated correctly
+                if (data.get("parent_subsidiary_id") == parent_subsidiary_id and 
+                    data.get("consolidation_enabled") == True):
+                    
+                    # Clean up
+                    self.session.delete(f"{BASE_URL}/companies/{parent_subsidiary_id}")
+                    
+                    self.log_result("Update BU Consolidation", True, "Business unit consolidation settings updated successfully")
+                    return True
+                else:
+                    self.log_result("Update BU Consolidation", False, "Consolidation fields not updated correctly", data)
+                    return False
+            else:
+                # Clean up subsidiary
+                self.session.delete(f"{BASE_URL}/companies/{parent_subsidiary_id}")
+                self.log_result("Update BU Consolidation", False, f"Update failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Update BU Consolidation", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_business_unit_consolidation(self):
+        """Test GET /business-units/{id}/consolidation endpoint"""
+        if not self.test_bu_id:
+            self.log_result("Get BU Consolidation", False, "No test business unit ID available")
+            return False
+        
+        try:
+            response = self.session.get(f"{BASE_URL}/business-units/{self.test_bu_id}/consolidation")
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify required fields are present
+                required_fields = ["business_unit", "company", "consolidation_summary", "journal_entries", "date_range"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    # Verify consolidation_summary structure
+                    summary = data.get("consolidation_summary", {})
+                    summary_fields = ["total_debits", "total_credits", "net_balance", "entries_count", "consolidation_enabled"]
+                    missing_summary_fields = [field for field in summary_fields if field not in summary]
+                    
+                    if not missing_summary_fields:
+                        self.log_result("Get BU Consolidation", True, "Business unit consolidation data retrieved successfully")
+                        return True
+                    else:
+                        self.log_result("Get BU Consolidation", False, f"Missing consolidation summary fields: {missing_summary_fields}")
+                        return False
+                else:
+                    self.log_result("Get BU Consolidation", False, f"Missing required fields: {missing_fields}")
+                    return False
+            else:
+                self.log_result("Get BU Consolidation", False, f"Request failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get BU Consolidation", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_business_unit_consolidation_with_dates(self):
+        """Test GET /business-units/{id}/consolidation with date filtering"""
+        if not self.test_bu_id:
+            self.log_result("Get BU Consolidation with Dates", False, "No test business unit ID available")
+            return False
+        
+        try:
+            # Test with date range
+            start_date = "2024-01-01T00:00:00Z"
+            end_date = "2024-12-31T23:59:59Z"
+            
+            response = self.session.get(f"{BASE_URL}/business-units/{self.test_bu_id}/consolidation", 
+                                      params={"start_date": start_date, "end_date": end_date})
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify date range is reflected in response
+                date_range = data.get("date_range", {})
+                if (date_range.get("start_date") == start_date and 
+                    date_range.get("end_date") == end_date):
+                    self.log_result("Get BU Consolidation with Dates", True, "Date filtering works correctly")
+                    return True
+                else:
+                    self.log_result("Get BU Consolidation with Dates", False, "Date range not reflected correctly in response")
+                    return False
+            else:
+                self.log_result("Get BU Consolidation with Dates", False, f"Request failed with status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get BU Consolidation with Dates", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_business_unit_consolidation_invalid_id(self):
+        """Test GET /business-units/{id}/consolidation with invalid ID"""
+        try:
+            response = self.session.get(f"{BASE_URL}/business-units/invalid-id/consolidation")
+            
+            if response.status_code == 404:
+                self.log_result("Get BU Consolidation Invalid ID", True, "Correctly returned 404 for invalid business unit ID")
+                return True
+            else:
+                self.log_result("Get BU Consolidation Invalid ID", False, f"Expected 404, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Get BU Consolidation Invalid ID", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_consolidated_report(self):
+        """Test GET /companies/{id}/consolidated-report endpoint"""
+        if not self.test_company_id:
+            self.log_result("Get Consolidated Report", False, "No test company ID available")
+            return False
+        
+        try:
+            response = self.session.get(f"{BASE_URL}/companies/{self.test_company_id}/consolidated-report")
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify required fields are present
+                required_fields = ["company", "consolidation_period", "business_units_summary", "consolidated_totals", "all_journal_entries"]
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    # Verify consolidated_totals structure
+                    totals = data.get("consolidated_totals", {})
+                    totals_fields = ["total_debits", "total_credits", "net_balance", "total_entries"]
+                    missing_totals_fields = [field for field in totals_fields if field not in totals]
+                    
+                    if not missing_totals_fields:
+                        self.log_result("Get Consolidated Report", True, "Consolidated report retrieved successfully")
+                        return True
+                    else:
+                        self.log_result("Get Consolidated Report", False, f"Missing consolidated totals fields: {missing_totals_fields}")
+                        return False
+                else:
+                    self.log_result("Get Consolidated Report", False, f"Missing required fields: {missing_fields}")
+                    return False
+            else:
+                self.log_result("Get Consolidated Report", False, f"Request failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Consolidated Report", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_consolidated_report_with_dates(self):
+        """Test GET /companies/{id}/consolidated-report with date filtering"""
+        if not self.test_company_id:
+            self.log_result("Get Consolidated Report with Dates", False, "No test company ID available")
+            return False
+        
+        try:
+            # Test with date range
+            start_date = "2024-01-01T00:00:00Z"
+            end_date = "2024-12-31T23:59:59Z"
+            
+            response = self.session.get(f"{BASE_URL}/companies/{self.test_company_id}/consolidated-report", 
+                                      params={"start_date": start_date, "end_date": end_date})
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify date range is reflected in response
+                period = data.get("consolidation_period", {})
+                if (period.get("start_date") == start_date and 
+                    period.get("end_date") == end_date):
+                    self.log_result("Get Consolidated Report with Dates", True, "Date filtering works correctly for consolidated report")
+                    return True
+                else:
+                    self.log_result("Get Consolidated Report with Dates", False, "Date range not reflected correctly in response")
+                    return False
+            else:
+                self.log_result("Get Consolidated Report with Dates", False, f"Request failed with status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Consolidated Report with Dates", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_consolidated_report_invalid_id(self):
+        """Test GET /companies/{id}/consolidated-report with invalid ID"""
+        try:
+            response = self.session.get(f"{BASE_URL}/companies/invalid-id/consolidated-report")
+            
+            if response.status_code == 404:
+                self.log_result("Get Consolidated Report Invalid ID", True, "Correctly returned 404 for invalid company ID")
+                return True
+            else:
+                self.log_result("Get Consolidated Report Invalid ID", False, f"Expected 404, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Get Consolidated Report Invalid ID", False, f"Error: {str(e)}")
+            return False
+
+    def test_set_business_unit_consolidation(self):
+        """Test POST /business-units/{id}/set-consolidation endpoint"""
+        if not self.test_bu_id:
+            self.log_result("Set BU Consolidation", False, "No test business unit ID available")
+            return False
+        
+        try:
+            # Create a subsidiary company to use as parent subsidiary
+            subsidiary_data = {
+                "name": "Parent Subsidiary for Set Consolidation Test",
+                "industry": "restaurant"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=subsidiary_data)
+            
+            if response.status_code != 200:
+                self.log_result("Set BU Consolidation", False, "Failed to create parent subsidiary")
+                return False
+            
+            parent_subsidiary = response.json()
+            parent_subsidiary_id = parent_subsidiary["id"]
+            
+            # Set consolidation settings
+            consolidation_data = {
+                "parent_subsidiary_id": parent_subsidiary_id,
+                "consolidation_enabled": True
+            }
+            
+            response = self.session.post(f"{BASE_URL}/business-units/{self.test_bu_id}/set-consolidation", 
+                                       json=consolidation_data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Verify response structure
+                if (data.get("success") == True and 
+                    "business_unit" in data and 
+                    data["business_unit"].get("parent_subsidiary_id") == parent_subsidiary_id and
+                    data["business_unit"].get("consolidation_enabled") == True):
+                    
+                    # Clean up
+                    self.session.delete(f"{BASE_URL}/companies/{parent_subsidiary_id}")
+                    
+                    self.log_result("Set BU Consolidation", True, "Business unit consolidation settings updated via set-consolidation endpoint")
+                    return True
+                else:
+                    self.log_result("Set BU Consolidation", False, "Consolidation settings not updated correctly", data)
+                    return False
+            else:
+                # Clean up subsidiary
+                self.session.delete(f"{BASE_URL}/companies/{parent_subsidiary_id}")
+                self.log_result("Set BU Consolidation", False, f"Request failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Set BU Consolidation", False, f"Error: {str(e)}")
+            return False
+
+    def test_set_business_unit_consolidation_invalid_parent(self):
+        """Test POST /business-units/{id}/set-consolidation with invalid parent subsidiary"""
+        if not self.test_bu_id:
+            self.log_result("Set BU Consolidation Invalid Parent", False, "No test business unit ID available")
+            return False
+        
+        try:
+            consolidation_data = {
+                "parent_subsidiary_id": "invalid-subsidiary-id",
+                "consolidation_enabled": True
+            }
+            
+            response = self.session.post(f"{BASE_URL}/business-units/{self.test_bu_id}/set-consolidation", 
+                                       json=consolidation_data)
+            
+            if response.status_code == 404:
+                self.log_result("Set BU Consolidation Invalid Parent", True, "Correctly returned 404 for invalid parent subsidiary")
+                return True
+            else:
+                self.log_result("Set BU Consolidation Invalid Parent", False, f"Expected 404, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Set BU Consolidation Invalid Parent", False, f"Error: {str(e)}")
+            return False
+
+    def test_set_business_unit_consolidation_invalid_bu_id(self):
+        """Test POST /business-units/{id}/set-consolidation with invalid business unit ID"""
+        try:
+            consolidation_data = {
+                "consolidation_enabled": False
+            }
+            
+            response = self.session.post(f"{BASE_URL}/business-units/invalid-id/set-consolidation", 
+                                       json=consolidation_data)
+            
+            if response.status_code == 404:
+                self.log_result("Set BU Consolidation Invalid BU ID", True, "Correctly returned 404 for invalid business unit ID")
+                return True
+            else:
+                self.log_result("Set BU Consolidation Invalid BU ID", False, f"Expected 404, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Set BU Consolidation Invalid BU ID", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_business_units_includes_parent_subsidiary_name(self):
+        """Test that GET /business-units includes parent_subsidiary_name"""
+        try:
+            response = self.session.get(f"{BASE_URL}/business-units")
+            
+            if response.status_code == 200:
+                business_units = response.json()
+                if business_units:
+                    # Check if any BU has parent_subsidiary_name field (even if None)
+                    has_parent_subsidiary_field = any("parent_subsidiary_name" in bu for bu in business_units)
+                    if has_parent_subsidiary_field:
+                        self.log_result("Get BUs Includes Parent Subsidiary Name", True, "Business units include parent_subsidiary_name field")
+                        return True
+                    else:
+                        self.log_result("Get BUs Includes Parent Subsidiary Name", False, "Business units missing parent_subsidiary_name field")
+                        return False
+                else:
+                    self.log_result("Get BUs Includes Parent Subsidiary Name", True, "No business units found - test skipped")
+                    return True
+            else:
+                self.log_result("Get BUs Includes Parent Subsidiary Name", False, f"Request failed with status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get BUs Includes Parent Subsidiary Name", False, f"Error: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests"""
