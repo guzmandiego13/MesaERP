@@ -1250,7 +1250,7 @@ class BackendTester:
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print("🚀 Starting Backend API Tests for Company Management with Soft Delete")
+        print("🚀 Starting Backend API Tests for Company Management and Business Unit Consolidation")
         print("=" * 80)
         
         # Authentication
