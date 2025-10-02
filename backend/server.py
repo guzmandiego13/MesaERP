@@ -1687,6 +1687,50 @@ async def delete_user(
 # BRANDING MANAGEMENT
 # ============================================================================
 
+# Create uploads directory if it doesn't exist
+UPLOAD_DIR = Path("/app/backend/uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+@api_router.post("/upload-logo/{company_id}")
+async def upload_logo(
+    company_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload company logo"""
+    # Validate file type
+    if not file.content_type in ["image/jpeg", "image/jpg", "image/png"]:
+        raise HTTPException(status_code=400, detail="Only JPG and PNG files are allowed")
+    
+    # Generate unique filename
+    file_extension = file.filename.split(".")[-1]
+    unique_filename = f"{company_id}_{uuid.uuid4()}.{file_extension}"
+    file_path = UPLOAD_DIR / unique_filename
+    
+    # Save file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Generate URL (relative path)
+    logo_url = f"/api/uploads/{unique_filename}"
+    
+    # Update branding with new logo URL
+    await db.company_branding.update_one(
+        {"company_id": company_id},
+        {"$set": {"logo_url": logo_url, "updated_at": datetime.now(timezone.utc)}},
+        upsert=True
+    )
+    
+    return {"logo_url": logo_url}
+
+@api_router.get("/uploads/{filename}")
+async def get_uploaded_file(filename: str):
+    """Serve uploaded files"""
+    file_path = UPLOAD_DIR / filename
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
+
 @api_router.get("/branding/{company_id}")
 async def get_branding(
     company_id: str,
