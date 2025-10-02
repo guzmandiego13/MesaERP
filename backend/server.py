@@ -1634,19 +1634,22 @@ async def create_user(
     user_dict.pop("password_hash")
     return user_dict
 
+class UpdateUserRequest(BaseModel):
+    permissions: Optional[UserPermissions] = None
+    is_active: Optional[bool] = None
+
 @api_router.put("/users/{user_id}")
 async def update_user(
     user_id: str,
-    permissions: Optional[UserPermissions] = None,
-    is_active: Optional[bool] = None,
+    request: UpdateUserRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """Update user permissions or status"""
     update_data = {}
-    if permissions:
-        update_data["permissions"] = permissions.dict()
-    if is_active is not None:
-        update_data["is_active"] = is_active
+    if request.permissions:
+        update_data["permissions"] = request.permissions.dict()
+    if request.is_active is not None:
+        update_data["is_active"] = request.is_active
     
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
