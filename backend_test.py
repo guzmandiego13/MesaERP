@@ -2242,9 +2242,8 @@ INV-TEST-003,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Non Existent Account,Test
 2024-01-17T00:00:00Z,Utility Bill,-150.00,debit"""
             
             files = {'file': ('test_bank_statement.csv', csv_content, 'text/csv')}
-            data = {'company_id': self.test_company_id}
             
-            response = self.session.post(f"{BASE_URL}/bank-statements/upload", files=files, data=data)
+            response = self.session.post(f"{BASE_URL}/bank-statements/upload?company_id={self.test_company_id}", files=files)
             
             if response.status_code == 200:
                 data = response.json()
