@@ -15,8 +15,14 @@ const API = `${BACKEND_URL}/api`;
 export default function Settings({ company }) {
   const [subsidiaries, setSubsidiaries] = useState([]);
   const [businessUnits, setBusinessUnits] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [apiKeys, setAPIKeys] = useState([]);
+  const [branding, setBranding] = useState(null);
+  
   const [showCompanyDialog, setShowCompanyDialog] = useState(false);
   const [showBUDialog, setShowBUDialog] = useState(false);
+  const [showUserDialog, setShowUserDialog] = useState(false);
+  const [showAPIDialog, setShowAPIDialog] = useState(false);
 
   const [companyForm, setCompanyForm] = useState({
     name: "",
@@ -30,6 +36,33 @@ export default function Settings({ company }) {
     code: "",
     description: "",
     manager_name: ""
+  });
+  
+  const [userForm, setUserForm] = useState({
+    email: "",
+    password: "",
+    name: "",
+    role: "Analyst",
+    permissions: {
+      view_dashboard: true,
+      manage_information: false,
+      manage_accounts_ledger: false,
+      full_access: false
+    }
+  });
+  
+  const [apiForm, setAPIForm] = useState({
+    name: "",
+    service_type: "parrot_pos",
+    api_key: "",
+    api_secret: ""
+  });
+  
+  const [brandingForm, setBrandingForm] = useState({
+    logo_url: "",
+    primary_color: "#3b82f6",
+    secondary_color: "#8b5cf6",
+    accent_color: "#10b981"
   });
 
   const token = localStorage.getItem("token");
