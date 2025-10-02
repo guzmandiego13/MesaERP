@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, DollarSign, ShoppingCart, Package, FileText, LogOut, Building2 } from "lucide-react";
+import { LayoutDashboard, DollarSign, ShoppingCart, Package, FileText, Settings as SettingsIcon, LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Layout({ user, tenant, onLogout }) {
