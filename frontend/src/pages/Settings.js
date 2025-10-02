@@ -49,9 +49,37 @@ export default function Settings({ company }) {
     name: "",
     role: "Analyst",
     permissions: {
+      // Dashboard & Reporting
       view_dashboard: true,
-      manage_information: false,
+      view_reports: false,
+      export_data: false,
+      
+      // Financial Management
+      view_finances: false,
       manage_accounts_ledger: false,
+      create_journal_entries: false,
+      approve_journal_entries: false,
+      
+      // Company & Business Units
+      manage_information: false,
+      manage_companies: false,
+      manage_business_units: false,
+      
+      // User Management
+      view_users: false,
+      manage_users: false,
+      
+      // Settings & Configuration
+      manage_settings: false,
+      manage_api_keys: false,
+      manage_branding: false,
+      
+      // Inventory & Operations
+      view_inventory: false,
+      manage_inventory: false,
+      manage_procurement: false,
+      
+      // Administrative
       full_access: false
     }
   });
