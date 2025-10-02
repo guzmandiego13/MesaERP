@@ -23,6 +23,9 @@ export default function Settings({ company }) {
   const [showBUDialog, setShowBUDialog] = useState(false);
   const [showUserDialog, setShowUserDialog] = useState(false);
   const [showAPIDialog, setShowAPIDialog] = useState(false);
+  
+  const [editingCompany, setEditingCompany] = useState(null);
+  const [editingBU, setEditingBU] = useState(null);
 
   const [companyForm, setCompanyForm] = useState({
     name: "",
