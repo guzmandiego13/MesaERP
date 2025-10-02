@@ -804,26 +804,68 @@ export default function Settings({ company }) {
             <CardContent>
               <form onSubmit={handleUpdateBranding} className="space-y-6">
                 <div>
-                  <Label>Company Logo URL</Label>
-                  <Input
-                    value={brandingForm.logo_url}
-                    onChange={(e) => setBrandingForm({ ...brandingForm, logo_url: e.target.value })}
-                    placeholder="https://example.com/logo.png"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Enter a URL to your company logo (will appear in top left corner)
-                  </p>
-                  {brandingForm.logo_url && (
-                    <div className="mt-3 p-3 bg-slate-50 rounded">
-                      <p className="text-xs text-slate-600 mb-2">Preview:</p>
-                      <img 
-                        src={brandingForm.logo_url} 
-                        alt="Logo preview" 
-                        className="h-12 object-contain"
-                        onError={(e) => e.target.style.display = 'none'}
+                  <Label>Company Logo</Label>
+                  <div className="space-y-3">
+                    {/* File Upload */}
+                    <div>
+                      <label 
+                        htmlFor="logo-upload" 
+                        className="flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-slate-300 rounded-lg cursor-pointer hover:border-blue-400 transition-colors"
+                      >
+                        <Upload className="w-5 h-5 text-slate-600" />
+                        <span className="text-sm font-medium text-slate-700">
+                          Upload Logo (JPG or PNG)
+                        </span>
+                      </label>
+                      <input
+                        id="logo-upload"
+                        type="file"
+                        accept=".jpg,.jpeg,.png"
+                        onChange={handleLogoUpload}
+                        className="hidden"
                       />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Max file size: 5MB. Recommended: 200x50px transparent PNG
+                      </p>
                     </div>
-                  )}
+
+                    {/* OR divider */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 border-t border-slate-300"></div>
+                      <span className="text-xs text-slate-500">OR</span>
+                      <div className="flex-1 border-t border-slate-300"></div>
+                    </div>
+
+                    {/* URL Input */}
+                    <div>
+                      <Input
+                        value={brandingForm.logo_url}
+                        onChange={(e) => setBrandingForm({ ...brandingForm, logo_url: e.target.value })}
+                        placeholder="https://example.com/logo.png"
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Or enter a URL to your logo hosted elsewhere
+                      </p>
+                    </div>
+
+                    {/* Preview */}
+                    {brandingForm.logo_url && (
+                      <div className="p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <p className="text-sm font-medium text-slate-700 mb-2">Logo Preview:</p>
+                        <div className="bg-white p-3 rounded inline-block">
+                          <img 
+                            src={brandingForm.logo_url.startsWith('/') ? `${BACKEND_URL}${brandingForm.logo_url}` : brandingForm.logo_url}
+                            alt="Logo preview" 
+                            className="h-12 object-contain"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.parentElement.innerHTML = '<p class="text-red-600 text-sm">Failed to load logo</p>';
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
