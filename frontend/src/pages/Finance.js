@@ -194,6 +194,148 @@ export default function Finance() {
           <p className="text-slate-600 mt-1">Financial statements and reporting</p>
         </div>
         <div className="flex gap-3">
+          <Dialog open={showJournalDialog} onOpenChange={setShowJournalDialog}>
+            <DialogTrigger asChild>
+              <Button data-testid="create-journal-entry">
+                <Plus className="w-4 h-4 mr-2" />
+                New Journal Entry
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create Journal Entry</DialogTitle>
+                <DialogDescription>Add a manual journal entry to adjust account balances</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleCreateJournalEntry} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={journalForm.entry_date}
+                      onChange={(e) => setJournalForm({ ...journalForm, entry_date: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Reference (Optional)</Label>
+                    <Input
+                      value={journalForm.reference}
+                      onChange={(e) => setJournalForm({ ...journalForm, reference: e.target.value })}
+                      placeholder="Invoice #, etc."
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Input
+                    value={journalForm.description}
+                    onChange={(e) => setJournalForm({ ...journalForm, description: e.target.value })}
+                    placeholder="Adjustment for..."
+                    required
+                  />
+                </div>
+                
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="font-semibold">Journal Lines</h4>
+                    <Button type="button" size="sm" variant="outline" onClick={addJournalLine}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      Add Line
+                    </Button>
+                  </div>
+                  
+                  {journalForm.lines.map((line, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 mb-2">
+                      <div className="col-span-5">
+                        <select
+                          value={line.account_id}
+                          onChange={(e) => updateJournalLine(index, 'account_id', e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                          required
+                        >
+                          <option value="">Select Account</option>
+                          {accounts.map((acc) => (
+                            <option key={acc.id} value={acc.id}>
+                              {acc.code} - {acc.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Debit"
+                          value={line.debit}
+                          onChange={(e) => updateJournalLine(index, 'debit', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="Credit"
+                          value={line.credit}
+                          onChange={(e) => updateJournalLine(index, 'credit', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <Input
+                          placeholder="Memo"
+                          value={line.memo}
+                          onChange={(e) => updateJournalLine(index, 'memo', e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="col-span-1 flex items-center">
+                        {journalForm.lines.length > 2 && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeJournalLine(index)}
+                          >
+                            <Trash className="w-4 h-4 text-red-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  <div className="mt-4 p-3 bg-slate-50 rounded">
+                    {(() => {
+                      const { totalDebits, totalCredits, balanced } = calculateBalance();
+                      return (
+                        <div className="flex justify-between items-center">
+                          <div className="text-sm">
+                            <span className="font-medium">Total Debits:</span> ${totalDebits.toFixed(2)}
+                            <span className="mx-3">|</span>
+                            <span className="font-medium">Total Credits:</span> ${totalCredits.toFixed(2)}
+                          </div>
+                          <div className={`text-sm font-semibold ${balanced ? 'text-green-600' : 'text-red-600'}`}>
+                            {balanced ? '✓ Balanced' : '✗ Not Balanced'}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setShowJournalDialog(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={!calculateBalance().balanced}>
+                    Create Entry
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+          
           <Button variant="outline" onClick={() => document.getElementById('csv-upload').click()} data-testid="import-bank-csv">
             <Upload className="w-4 h-4 mr-2" />
             Import Bank CSV
