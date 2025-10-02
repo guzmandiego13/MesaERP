@@ -1594,6 +1594,224 @@ async def get_locations(
     return locations
 
 # ============================================================================
+# USER MANAGEMENT
+# ============================================================================
+
+@api_router.get("/users")
+async def get_users(current_user: dict = Depends(get_current_user)):
+    """Get all users in the tenant"""
+    users = await db.users.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
+    # Remove password hashes from response
+    for user in users:
+        user.pop("password_hash", None)
+    return users
+
+@api_router.post("/users")
+async def create_user(
+    request: CreateUserRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new user (admin only)"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": request.email, "tenant_id": tenant_id})
+    if existing:
+        raise HTTPException(status_code=400, detail="User with this email already exists")
+    
+    user = User(
+        tenant_id=tenant_id,
+        email=request.email,
+        password_hash=pwd_context.hash(request.password),
+        name=request.name,
+        role=request.role,
+        permissions=request.permissions
+    )
+    await db.users.insert_one(user.dict())
+    
+    # Remove password hash from response
+    user_dict = user.dict()
+    user_dict.pop("password_hash")
+    return user_dict
+
+@api_router.put("/users/{user_id}")
+async def update_user(
+    user_id: str,
+    permissions: Optional[UserPermissions] = None,
+    is_active: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update user permissions or status"""
+    update_data = {}
+    if permissions:
+        update_data["permissions"] = permissions.dict()
+    if is_active is not None:
+        update_data["is_active"] = is_active
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = await db.users.update_one(
+        {"id": user_id, "tenant_id": current_user["tenant_id"]},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"success": True}
+
+@api_router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a user"""
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    result = await db.users.delete_one({"id": user_id, "tenant_id": current_user["tenant_id"]})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"success": True}
+
+# ============================================================================
+# BRANDING MANAGEMENT
+# ============================================================================
+
+@api_router.get("/branding/{company_id}")
+async def get_branding(
+    company_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get branding for a company"""
+    branding = await db.company_branding.find_one({
+        "company_id": company_id
+    })
+    
+    if not branding:
+        # Return defaults
+        return {
+            "company_id": company_id,
+            "logo_url": None,
+            "primary_color": "#3b82f6",
+            "secondary_color": "#8b5cf6",
+            "accent_color": "#10b981"
+        }
+    
+    return branding
+
+@api_router.put("/branding/{company_id}")
+async def update_branding(
+    company_id: str,
+    request: UpdateBrandingRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update company branding"""
+    update_data = {}
+    if request.logo_url is not None:
+        update_data["logo_url"] = request.logo_url
+    if request.primary_color:
+        update_data["primary_color"] = request.primary_color
+    if request.secondary_color:
+        update_data["secondary_color"] = request.secondary_color
+    if request.accent_color:
+        update_data["accent_color"] = request.accent_color
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    # Upsert
+    result = await db.company_branding.update_one(
+        {"company_id": company_id},
+        {"$set": update_data},
+        upsert=True
+    )
+    
+    branding = await db.company_branding.find_one({"company_id": company_id})
+    return branding
+
+# ============================================================================
+# API KEY MANAGEMENT
+# ============================================================================
+
+@api_router.get("/api-keys/{company_id}")
+async def get_api_keys(
+    company_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all API keys for a company"""
+    keys = await db.api_keys.find({"company_id": company_id}).to_list(1000)
+    
+    # Mask API keys in response (show only last 4 chars)
+    for key in keys:
+        if len(key["api_key"]) > 4:
+            key["api_key_masked"] = "*" * (len(key["api_key"]) - 4) + key["api_key"][-4:]
+        else:
+            key["api_key_masked"] = "****"
+        key.pop("api_key", None)
+        key.pop("api_secret", None)
+    
+    return keys
+
+@api_router.post("/api-keys/{company_id}")
+async def create_api_key(
+    company_id: str,
+    request: CreateAPIKeyRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Add a new API key"""
+    api_key = APIKey(
+        company_id=company_id,
+        name=request.name,
+        service_type=request.service_type,
+        api_key=request.api_key,
+        api_secret=request.api_secret
+    )
+    
+    await db.api_keys.insert_one(api_key.dict())
+    
+    # Return masked version
+    api_key_dict = api_key.dict()
+    api_key_dict["api_key_masked"] = "*" * (len(request.api_key) - 4) + request.api_key[-4:]
+    api_key_dict.pop("api_key")
+    api_key_dict.pop("api_secret")
+    
+    return api_key_dict
+
+@api_router.delete("/api-keys/{key_id}")
+async def delete_api_key(
+    key_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete an API key"""
+    result = await db.api_keys.delete_one({"id": key_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="API key not found")
+    
+    return {"success": True}
+
+@api_router.patch("/api-keys/{key_id}/toggle")
+async def toggle_api_key(
+    key_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Toggle API key active status"""
+    key = await db.api_keys.find_one({"id": key_id})
+    if not key:
+        raise HTTPException(status_code=404, detail="API key not found")
+    
+    new_status = not key.get("is_active", True)
+    await db.api_keys.update_one(
+        {"id": key_id},
+        {"$set": {"is_active": new_status}}
+    )
+    
+    return {"success": True, "is_active": new_status}
+
+# ============================================================================
 # SEED DATA
 # ============================================================================
 
