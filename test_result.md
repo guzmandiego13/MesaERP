@@ -101,3 +101,61 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Add edit and delete functionality for subsidiaries and business units in Settings page with inline editing and confirmation dialogs"
+
+backend:
+  - task: "Backend PUT/DELETE endpoints for companies and business units"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Backend endpoints already implemented with proper validation and cascading deletes"
+
+frontend:
+  - task: "Inline edit/delete for subsidiaries in Settings page"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/pages/Settings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Just implemented inline editing UI for subsidiaries with edit icons, form fields, and delete confirmation"
+
+  - task: "Inline edit/delete for business units in Settings page"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/pages/Settings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Just implemented inline editing UI for business units with edit icons, form fields, and delete confirmation"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Inline edit/delete for subsidiaries in Settings page"
+    - "Inline edit/delete for business units in Settings page"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "main"
+      message: "Implemented complete inline editing functionality for both subsidiaries and business units. Added edit icons on right side, inline form fields when editing, save/cancel buttons, delete confirmation dialogs, and proper API integration. Need to test frontend functionality and backend integration."
