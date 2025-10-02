@@ -180,7 +180,7 @@ export default function Settings({ company }) {
                       <Button type="button" variant="outline" onClick={() => setShowCompanyDialog(false)}>
                         Cancel
                       </Button>
-                      <Button type="submit">Create Company</Button>
+                      <Button type="submit">Create Subsidiary</Button>
                     </div>
                   </form>
                 </DialogContent>
