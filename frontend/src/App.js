@@ -8,6 +8,7 @@ import Finance from "@/pages/Finance";
 import Sales from "@/pages/Sales";
 import Inventory from "@/pages/Inventory";
 import Procurement from "@/pages/Procurement";
+import Settings from "@/pages/Settings";
 import Layout from "@/components/Layout";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
