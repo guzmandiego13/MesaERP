@@ -78,11 +78,13 @@ export default function Settings({ company }) {
   const handleCreateBU = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/business-units`, buForm, { headers });
+      await axios.post(`${API}/business-units`, {
+        ...buForm,
+        company_id: company.id  // Always create within current company
+      }, { headers });
       toast.success("Business unit created successfully");
       setShowBUDialog(false);
       setBUForm({
-        company_id: "",
         name: "",
         code: "",
         description: "",
@@ -93,8 +95,6 @@ export default function Settings({ company }) {
       toast.error(error.response?.data?.detail || "Failed to create business unit");
     }
   };
-
-  const parentCompanies = companies.filter(c => !c.parent_company_id);
 
   return (
     <div className="p-8 space-y-6" data-testid="settings-page">
