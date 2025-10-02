@@ -405,6 +405,127 @@ export default function CompanySelector({ onCompanySelect }) {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertTriangle className="w-5 h-5" />
+                Confirm Company Deletion
+              </DialogTitle>
+              <DialogDescription className="space-y-3 pt-2">
+                <p className="font-medium text-slate-900">
+                  Are you absolutely sure you want to delete "{companyToDelete?.name}"?
+                </p>
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-sm text-yellow-800">
+                    <strong>This action will:</strong>
+                  </p>
+                  <ul className="text-xs text-yellow-700 mt-2 space-y-1 list-disc ml-4">
+                    <li>Soft delete the company and all its data</li>
+                    <li>Create a backup for 6 months</li>
+                    <li>Allow restoration within 6 months</li>
+                    <li>Permanently delete after 6 months</li>
+                  </ul>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Type <strong>DELETE</strong> to confirm this action.
+                </p>
+                <Input
+                  placeholder="Type DELETE to confirm"
+                  onChange={(e) => {
+                    const deleteButton = document.getElementById('confirm-delete-btn');
+                    if (deleteButton) {
+                      deleteButton.disabled = e.target.value !== 'DELETE';
+                    }
+                  }}
+                  className="mt-2"
+                />
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-2 pt-4">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setCompanyToDelete(null);
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                id="confirm-delete-btn"
+                onClick={handleConfirmDelete}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+                disabled={true}
+              >
+                Delete Company
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Deleted Companies Dialog */}
+        <Dialog open={showDeletedDialog} onOpenChange={setShowDeletedDialog}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <RotateCcw className="w-5 h-5 text-orange-600" />
+                Deleted Companies
+              </DialogTitle>
+              <DialogDescription>
+                Companies deleted within the last 6 months that can be restored
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {deletedCompanies.map((company) => (
+                <div key={company.id} className="border border-orange-200 rounded-lg p-4 bg-orange-50">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                        <Building2 className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900">{company.name}</h4>
+                        <p className="text-sm text-slate-600 capitalize">{company.industry}</p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          Deleted: {new Date(company.deleted_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="mb-2">
+                        <span className="text-xs font-medium text-slate-600">Days remaining:</span>
+                        <div className={`text-sm font-bold ${
+                          company.days_remaining > 30 ? 'text-green-600' : 
+                          company.days_remaining > 7 ? 'text-yellow-600' : 'text-red-600'
+                        }`}>
+                          {company.days_remaining} days
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleRestoreCompany(company.id, company.name)}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        <RotateCcw className="w-4 h-4 mr-1" />
+                        Restore
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {deletedCompanies.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-slate-500">No deleted companies available for restoration</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
