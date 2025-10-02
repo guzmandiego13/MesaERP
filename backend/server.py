@@ -1754,6 +1754,7 @@ async def get_branding(
             "accent_color": "#10b981"
         }
     
+    branding.pop("_id", None)  # Remove MongoDB _id
     return branding
 
 @api_router.put("/branding/{company_id}")
