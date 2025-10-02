@@ -177,6 +177,8 @@ metadata:
 
 test_plan:
   current_focus:
+    - "Soft delete with backup functionality for companies"
+    - "Edit/delete companies in CompanySelector with soft delete and backup"
     - "Inline edit/delete for subsidiaries in Settings page"
     - "Inline edit/delete for business units in Settings page"
   stuck_tasks: []
