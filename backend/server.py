@@ -112,6 +112,8 @@ class BusinessUnit(BaseModel):
     manager_name: Optional[str] = None
     consolidation_enabled: bool = True  # Whether to roll up to parent subsidiary
     is_active: bool = True
+    deleted_at: Optional[datetime] = None  # For soft delete
+    backup_data: Optional[dict] = None  # Store backup of related data
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Location(BaseModel):
