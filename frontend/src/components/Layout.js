@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, DollarSign, ShoppingCart, Package, FileText, Settings as SettingsIcon, LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function Layout({ user, tenant, onLogout }) {
+export default function Layout({ user, tenant, company, onLogout, onChangeCompany }) {
   const location = useLocation();
 
   const navItems = [
@@ -20,9 +20,22 @@ export default function Layout({ user, tenant, onLogout }) {
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col">
         <div className="p-6 border-b border-slate-200">
           <h1 className="text-2xl font-bold text-slate-900">MesaERP</h1>
-          <div className="mt-3 flex items-center gap-2 text-sm text-slate-600">
-            <Building2 className="w-4 h-4" />
-            <span className="font-medium">{tenant?.name}</span>
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center gap-2 text-sm text-slate-600">
+              <Building2 className="w-4 h-4" />
+              <span className="font-medium">{tenant?.name}</span>
+            </div>
+            <div className="p-2 bg-blue-50 rounded-md">
+              <p className="text-xs text-slate-600">Current Company:</p>
+              <p className="font-semibold text-blue-900 text-sm">{company?.name}</p>
+              <button
+                onClick={onChangeCompany}
+                className="text-xs text-blue-600 hover:text-blue-700 underline mt-1"
+                data-testid="change-company-button"
+              >
+                Change Company
+              </button>
+            </div>
           </div>
         </div>
 
