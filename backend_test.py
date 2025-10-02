@@ -1991,11 +1991,13 @@ class BackendTester:
             return False
         
         try:
-            # Create test CSV content
-            csv_content = """account_name,description,account_type,account_code
-Test Cash Account,Test cash account for CSV import,Asset,1001
-Test Revenue Account,Test revenue account for CSV import,Revenue,4001
-Test Expense Account,Test expense account for CSV import,Expense,6001"""
+            # Create test CSV content with unique names
+            import time
+            timestamp = str(int(time.time()))
+            csv_content = f"""account_name,description,account_type,account_code
+Test Cash Account {timestamp},Test cash account for CSV import,Asset,1001
+Test Revenue Account {timestamp},Test revenue account for CSV import,Revenue,4001
+Test Expense Account {timestamp},Test expense account for CSV import,Expense,6001"""
             
             # Create file-like object
             files = {'file': ('test_accounts.csv', csv_content, 'text/csv')}
