@@ -641,17 +641,24 @@ async def create_account(
     await db.accounts.insert_one(account.dict())
     return account
 
+class UpdateAccountRequest(BaseModel):
+    code: Optional[str] = None
+    name: Optional[str] = None
+    account_type: Optional[AccountTypeEnum] = None
+    is_active: Optional[bool] = None
+
 @api_router.put("/finance/accounts/{account_id}")
 async def update_account(
     account_id: str,
-    code: Optional[str] = None,
-    name: Optional[str] = None,
-    account_type: Optional[AccountTypeEnum] = None,
-    is_active: Optional[bool] = None,
+    request: UpdateAccountRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """Update an existing account"""
     tenant_id = current_user["tenant_id"]
+    code = request.code
+    name = request.name
+    account_type = request.account_type
+    is_active = request.is_active
     
     update_data = {}
     if code is not None:
