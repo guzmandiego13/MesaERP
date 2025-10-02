@@ -1882,6 +1882,18 @@ async def update_business_unit(
         update_data["description"] = request.description
     if request.manager_name is not None:
         update_data["manager_name"] = request.manager_name
+    if request.parent_subsidiary_id is not None:
+        # Validate parent_subsidiary_id if provided
+        if request.parent_subsidiary_id:
+            parent_subsidiary = await db.companies.find_one({
+                "id": request.parent_subsidiary_id,
+                "tenant_id": tenant_id
+            })
+            if not parent_subsidiary:
+                raise HTTPException(status_code=404, detail="Parent subsidiary not found")
+        update_data["parent_subsidiary_id"] = request.parent_subsidiary_id
+    if request.consolidation_enabled is not None:
+        update_data["consolidation_enabled"] = request.consolidation_enabled
     if request.is_active is not None:
         update_data["is_active"] = request.is_active
     
