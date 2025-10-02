@@ -1799,6 +1799,7 @@ async def get_api_keys(
     
     # Mask API keys in response (show only last 4 chars)
     for key in keys:
+        key.pop("_id", None)  # Remove MongoDB _id
         if len(key["api_key"]) > 4:
             key["api_key_masked"] = "*" * (len(key["api_key"]) - 4) + key["api_key"][-4:]
         else:
