@@ -435,19 +435,8 @@ export default function Settings({ company }) {
     }
   };
 
-  const handleDeleteBU = async (buId) => {
-    const buToDelete = businessUnits.find(bu => bu.id === buId);
-    if (!window.confirm(`Are you sure you want to delete "${buToDelete?.name}"? This action cannot be undone.`)) {
-      return;
-    }
-    
-    try {
-      await axios.delete(`${API}/business-units/${buId}`, { headers });
-      toast.success("Business unit deleted successfully");
-      loadData();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to delete business unit");
-    }
+  const handleDeleteBU = (buId) => {
+    handleSoftDeleteBU(buId);
   };
 
   const handleCancelBUEdit = () => {
