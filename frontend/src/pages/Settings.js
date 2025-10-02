@@ -1227,28 +1227,51 @@ export default function Settings({ company }) {
                           <td className="py-3 px-4 text-sm">{user.email}</td>
                           <td className="py-3 px-4 text-sm">{user.role}</td>
                           <td className="py-3 px-4 text-xs">
-                            {user.permissions?.full_access && (
-                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded mr-1">Full</span>
-                            )}
-                            {user.permissions?.manage_accounts_ledger && (
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded mr-1">Accounts</span>
-                            )}
-                            {user.permissions?.manage_information && (
-                              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded mr-1">Manage</span>
-                            )}
-                            {user.permissions?.view_dashboard && !user.permissions?.manage_information && (
-                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">View Only</span>
-                            )}
+                            <div className="flex flex-wrap gap-1">
+                              {user.permissions?.full_access && (
+                                <span className="px-2 py-1 bg-red-100 text-red-700 rounded">Full Access</span>
+                              )}
+                              {user.permissions?.manage_users && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">Users</span>
+                              )}
+                              {user.permissions?.manage_companies && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">Companies</span>
+                              )}
+                              {user.permissions?.manage_accounts_ledger && (
+                                <span className="px-2 py-1 bg-green-100 text-green-700 rounded">Ledger</span>
+                              )}
+                              {user.permissions?.view_finances && (
+                                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 rounded">Finance</span>
+                              )}
+                              {user.permissions?.view_dashboard && !user.permissions?.full_access && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">Dashboard</span>
+                              )}
+                              {(!user.permissions?.full_access && !user.permissions?.manage_users && !user.permissions?.manage_companies && !user.permissions?.manage_accounts_ledger && !user.permissions?.view_finances) && (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded">Limited</span>
+                              )}
+                            </div>
                           </td>
                           <td className="py-3 px-4">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => handleDeleteUser(user.id)}
-                            >
-                              Delete
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditUser(user.id)}
+                                className="p-2 h-8 w-8"
+                                title="Edit user"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="p-2 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() => handleDeleteUser(user.id)}
+                                title="Delete user"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
