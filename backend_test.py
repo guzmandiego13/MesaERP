@@ -1139,14 +1139,14 @@ class BackendTester:
             parent_subsidiary = response.json()
             parent_subsidiary_id = parent_subsidiary["id"]
             
-            # Set consolidation settings
-            consolidation_data = {
+            # Set consolidation settings (using query parameters)
+            params = {
                 "parent_subsidiary_id": parent_subsidiary_id,
                 "consolidation_enabled": True
             }
             
             response = self.session.post(f"{BASE_URL}/business-units/{self.test_bu_id}/set-consolidation", 
-                                       json=consolidation_data)
+                                       params=params)
             
             if response.status_code == 200:
                 data = response.json()
