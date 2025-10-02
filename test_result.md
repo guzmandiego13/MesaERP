@@ -116,6 +116,9 @@ backend:
         - working: true
           agent: "main"
           comment: "Backend endpoints already implemented with proper validation and cascading deletes"
+        - working: true
+          agent: "testing"
+          comment: "Comprehensive backend testing completed successfully. All 9 tests passed: Company update (PUT /api/companies/{id}) works correctly with name, industry, tax_id, accounting_basis updates. Business unit update (PUT /api/business-units/{id}) works with name, code, description, manager_name updates. Company delete properly validates subsidiaries and prevents deletion when subsidiaries exist. Business unit delete validates locations and prevents deletion when locations exist. Both endpoints handle invalid IDs correctly (404), unauthorized access returns 401, and responses exclude MongoDB _id fields. Cascade deletion works properly for companies and business units without dependencies."
 
 frontend:
   - task: "Inline edit/delete for subsidiaries in Settings page"
