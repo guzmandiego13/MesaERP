@@ -1944,6 +1944,243 @@ async def delete_business_unit(
     
     return {"success": True, "message": "Business unit deleted"}
 
+@api_router.get("/business-units/{bu_id}/consolidation")
+async def get_business_unit_consolidation(
+    bu_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get consolidation data for a business unit and its relationship to parent subsidiary"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get the business unit
+    business_unit = await db.business_units.find_one({"id": bu_id, "tenant_id": tenant_id})
+    if not business_unit:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    # Build date filter if provided
+    date_filter = {}
+    if start_date:
+        date_filter["$gte"] = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+    if end_date:
+        date_filter["$lte"] = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    
+    query = {
+        "tenant_id": tenant_id,
+        "business_unit_id": bu_id
+    }
+    if date_filter:
+        query["entry_date"] = date_filter
+    
+    # Get journal entries for this business unit
+    journal_entries = await db.journal_entries.find(query).to_list(None)
+    
+    # Calculate totals
+    total_debits = 0
+    total_credits = 0
+    entries_count = len(journal_entries)
+    
+    for entry in journal_entries:
+        entry.pop("_id", None)
+        for line in entry.get("lines", []):
+            total_debits += line.get("debit", 0)
+            total_credits += line.get("credit", 0)
+    
+    # Get parent subsidiary info if linked
+    parent_subsidiary_info = None
+    if business_unit.get("parent_subsidiary_id"):
+        parent_subsidiary = await db.companies.find_one({
+            "id": business_unit["parent_subsidiary_id"],
+            "tenant_id": tenant_id
+        })
+        if parent_subsidiary:
+            parent_subsidiary.pop("_id", None)
+            parent_subsidiary_info = parent_subsidiary
+    
+    # Get company info
+    company = await db.companies.find_one({
+        "id": business_unit["company_id"],
+        "tenant_id": tenant_id
+    })
+    if company:
+        company.pop("_id", None)
+    
+    business_unit.pop("_id", None)
+    
+    return {
+        "business_unit": business_unit,
+        "company": company,
+        "parent_subsidiary": parent_subsidiary_info,
+        "consolidation_summary": {
+            "total_debits": total_debits,
+            "total_credits": total_credits,
+            "net_balance": total_debits - total_credits,
+            "entries_count": entries_count,
+            "consolidation_enabled": business_unit.get("consolidation_enabled", True)
+        },
+        "journal_entries": journal_entries,
+        "date_range": {
+            "start_date": start_date,
+            "end_date": end_date
+        }
+    }
+
+@api_router.get("/companies/{company_id}/consolidated-report")
+async def get_consolidated_report(
+    company_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get consolidated financial report for a subsidiary company from all its business units"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get the company
+    company = await db.companies.find_one({"id": company_id, "tenant_id": tenant_id})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Build date filter if provided
+    date_filter = {}
+    if start_date:
+        date_filter["$gte"] = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+    if end_date:
+        date_filter["$lte"] = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+    
+    # Get all business units that consolidate to this company
+    business_units = await db.business_units.find({
+        "tenant_id": tenant_id,
+        "parent_subsidiary_id": company_id,
+        "consolidation_enabled": True,
+        "is_active": True
+    }).to_list(None)
+    
+    # Get direct business units of this company
+    direct_business_units = await db.business_units.find({
+        "tenant_id": tenant_id,
+        "company_id": company_id,
+        "consolidation_enabled": True,
+        "is_active": True
+    }).to_list(None)
+    
+    # Combine all business units
+    all_business_units = business_units + direct_business_units
+    
+    consolidated_data = {
+        "company": company,
+        "consolidation_period": {
+            "start_date": start_date,
+            "end_date": end_date
+        },
+        "business_units_summary": [],
+        "consolidated_totals": {
+            "total_debits": 0,
+            "total_credits": 0,
+            "net_balance": 0,
+            "total_entries": 0
+        },
+        "all_journal_entries": []
+    }
+    
+    company.pop("_id", None)
+    
+    for bu in all_business_units:
+        bu.pop("_id", None)
+        
+        # Get journal entries for this business unit
+        query = {
+            "tenant_id": tenant_id,
+            "business_unit_id": bu["id"]
+        }
+        if date_filter:
+            query["entry_date"] = date_filter
+        
+        bu_entries = await db.journal_entries.find(query).to_list(None)
+        
+        # Calculate BU totals
+        bu_debits = 0
+        bu_credits = 0
+        
+        for entry in bu_entries:
+            entry.pop("_id", None)
+            for line in entry.get("lines", []):
+                bu_debits += line.get("debit", 0)
+                bu_credits += line.get("credit", 0)
+        
+        bu_summary = {
+            "business_unit": bu,
+            "totals": {
+                "debits": bu_debits,
+                "credits": bu_credits,
+                "net_balance": bu_debits - bu_credits,
+                "entries_count": len(bu_entries)
+            }
+        }
+        
+        consolidated_data["business_units_summary"].append(bu_summary)
+        consolidated_data["consolidated_totals"]["total_debits"] += bu_debits
+        consolidated_data["consolidated_totals"]["total_credits"] += bu_credits
+        consolidated_data["consolidated_totals"]["total_entries"] += len(bu_entries)
+        consolidated_data["all_journal_entries"].extend(bu_entries)
+    
+    consolidated_data["consolidated_totals"]["net_balance"] = (
+        consolidated_data["consolidated_totals"]["total_debits"] - 
+        consolidated_data["consolidated_totals"]["total_credits"]
+    )
+    
+    return consolidated_data
+
+@api_router.post("/business-units/{bu_id}/set-consolidation")
+async def set_business_unit_consolidation(
+    bu_id: str,
+    parent_subsidiary_id: Optional[str] = None,
+    consolidation_enabled: bool = True,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update business unit consolidation settings"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get the business unit
+    business_unit = await db.business_units.find_one({"id": bu_id, "tenant_id": tenant_id})
+    if not business_unit:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    update_data = {
+        "consolidation_enabled": consolidation_enabled
+    }
+    
+    # Validate parent_subsidiary_id if provided
+    if parent_subsidiary_id is not None:
+        if parent_subsidiary_id:
+            parent_subsidiary = await db.companies.find_one({
+                "id": parent_subsidiary_id,
+                "tenant_id": tenant_id
+            })
+            if not parent_subsidiary:
+                raise HTTPException(status_code=404, detail="Parent subsidiary not found")
+        update_data["parent_subsidiary_id"] = parent_subsidiary_id
+    
+    # Update the business unit
+    result = await db.business_units.update_one(
+        {"id": bu_id, "tenant_id": tenant_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    # Return updated business unit
+    updated_bu = await db.business_units.find_one({"id": bu_id, "tenant_id": tenant_id})
+    if updated_bu:
+        updated_bu.pop("_id", None)
+    
+    return {
+        "success": True,
+        "message": "Consolidation settings updated",
+        "business_unit": updated_bu
+    }
+
 # ============================================================================
 # LOCATIONS
 # ============================================================================
