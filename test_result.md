@@ -162,3 +162,5 @@ test_plan:
 agent_communication:
     - agent: "main"
       message: "Implemented complete inline editing functionality for both subsidiaries and business units. Added edit icons on right side, inline form fields when editing, save/cancel buttons, delete confirmation dialogs, and proper API integration. Need to test frontend functionality and backend integration."
+    - agent: "testing"
+      message: "Backend testing completed successfully. All company and business unit edit/delete endpoints are working perfectly. Created comprehensive test suite covering: PUT/DELETE for companies and business units, validation for subsidiaries and locations, error handling for invalid IDs and unauthorized access, proper response formatting without MongoDB _id fields. All 9 backend tests passed. Frontend testing is still needed for the inline editing UI components."
