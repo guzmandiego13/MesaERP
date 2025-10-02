@@ -48,6 +48,7 @@ export default function Finance() {
 
   useEffect(() => {
     loadFinanceData();
+    loadJournalEntries();
   }, [dateRange]);
 
   const loadFinanceData = async () => {
@@ -63,6 +64,95 @@ export default function Finance() {
     } catch (error) {
       toast.error("Failed to load finance data");
     }
+  };
+  
+  const loadJournalEntries = async () => {
+    try {
+      const response = await axios.get(
+        `${API}/finance/journal-entries?start_date=${dateRange.start}&end_date=${dateRange.end}`,
+        { headers }
+      );
+      setJournalEntries(response.data);
+    } catch (error) {
+      console.error("Failed to load journal entries", error);
+    }
+  };
+  
+  const handleCreateAccount = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingAccount) {
+        await axios.put(`${API}/finance/accounts/${editingAccount.id}`, accountForm, { headers });
+        toast.success("Account updated successfully");
+      } else {
+        await axios.post(`${API}/finance/accounts`, accountForm, { headers });
+        toast.success("Account created successfully");
+      }
+      setShowAccountDialog(false);
+      setEditingAccount(null);
+      setAccountForm({ code: "", name: "", account_type: "Asset" });
+      loadFinanceData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to save account");
+    }
+  };
+  
+  const handleEditAccount = (account) => {
+    setEditingAccount(account);
+    setAccountForm({
+      code: account.code,
+      name: account.name,
+      account_type: account.account_type
+    });
+    setShowAccountDialog(true);
+  };
+  
+  const handleCreateJournalEntry = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/finance/journal-entries`, journalForm, { headers });
+      toast.success("Journal entry created successfully");
+      setShowJournalDialog(false);
+      setJournalForm({
+        entry_date: new Date().toISOString().split('T')[0],
+        description: "",
+        reference: "",
+        lines: [
+          { account_id: "", debit: 0, credit: 0, memo: "" },
+          { account_id: "", debit: 0, credit: 0, memo: "" }
+        ]
+      });
+      loadFinanceData();
+      loadJournalEntries();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to create journal entry");
+    }
+  };
+  
+  const addJournalLine = () => {
+    setJournalForm({
+      ...journalForm,
+      lines: [...journalForm.lines, { account_id: "", debit: 0, credit: 0, memo: "" }]
+    });
+  };
+  
+  const updateJournalLine = (index, field, value) => {
+    const newLines = [...journalForm.lines];
+    newLines[index][field] = value;
+    setJournalForm({ ...journalForm, lines: newLines });
+  };
+  
+  const removeJournalLine = (index) => {
+    if (journalForm.lines.length > 2) {
+      const newLines = journalForm.lines.filter((_, i) => i !== index);
+      setJournalForm({ ...journalForm, lines: newLines });
+    }
+  };
+  
+  const calculateBalance = () => {
+    const totalDebits = journalForm.lines.reduce((sum, line) => sum + parseFloat(line.debit || 0), 0);
+    const totalCredits = journalForm.lines.reduce((sum, line) => sum + parseFloat(line.credit || 0), 0);
+    return { totalDebits, totalCredits, balanced: Math.abs(totalDebits - totalCredits) < 0.01 };
   };
 
   const handleCSVUpload = async (e) => {
