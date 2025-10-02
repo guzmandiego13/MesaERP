@@ -13,8 +13,13 @@ const API = `${BACKEND_URL}/api`;
 
 export default function CompanySelector({ onCompanySelect }) {
   const [companies, setCompanies] = useState([]);
+  const [deletedCompanies, setDeletedCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDeletedDialog, setShowDeletedDialog] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingCompany, setEditingCompany] = useState(null);
+  const [companyToDelete, setCompanyToDelete] = useState(null);
   const [companyForm, setCompanyForm] = useState({
     name: "",
     industry: "restaurant",
