@@ -1592,6 +1592,158 @@ async def delete_company(
     
     return {"success": True, "message": "Company and associated data deleted"}
 
+@api_router.post("/companies/{company_id}/soft-delete")
+async def soft_delete_company(
+    company_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Soft delete a company with backup for 6 months"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get the company
+    company = await db.companies.find_one({"id": company_id, "tenant_id": tenant_id})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    if company.get("deleted_at"):
+        raise HTTPException(status_code=400, detail="Company is already deleted")
+    
+    # Check if company has subsidiaries
+    subsidiaries = await db.companies.count_documents({
+        "tenant_id": tenant_id,
+        "parent_company_id": company_id,
+        "deleted_at": None
+    })
+    
+    if subsidiaries > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete company with {subsidiaries} active subsidiaries. Delete subsidiaries first."
+        )
+    
+    # Create backup data
+    backup_data = {
+        "business_units": [],
+        "locations": [],
+        "accounts": [],
+        "api_keys": [],
+        "branding": [],
+        "journal_entries": []
+    }
+    
+    # Collect related data for backup
+    backup_data["business_units"] = await db.business_units.find({"company_id": company_id}).to_list(None)
+    backup_data["locations"] = await db.locations.find({"company_id": company_id}).to_list(None)
+    backup_data["accounts"] = await db.accounts.find({"company_id": company_id}).to_list(None)
+    backup_data["api_keys"] = await db.api_keys.find({"company_id": company_id}).to_list(None)
+    backup_data["branding"] = await db.company_branding.find({"company_id": company_id}).to_list(None)
+    backup_data["journal_entries"] = await db.journal_entries.find({"company_id": company_id}).to_list(None)
+    
+    # Remove MongoDB ObjectIds from backup data
+    for collection_data in backup_data.values():
+        for item in collection_data:
+            item.pop("_id", None)
+    
+    # Soft delete the company
+    delete_time = datetime.now(timezone.utc)
+    result = await db.companies.update_one(
+        {"id": company_id, "tenant_id": tenant_id},
+        {
+            "$set": {
+                "deleted_at": delete_time,
+                "backup_data": backup_data,
+                "is_active": False
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    # Deactivate related data (but keep it for potential restoration)
+    await db.business_units.update_many({"company_id": company_id}, {"$set": {"is_active": False}})
+    await db.locations.update_many({"company_id": company_id}, {"$set": {"is_active": False}})
+    await db.accounts.update_many({"company_id": company_id}, {"$set": {"is_active": False}})
+    await db.api_keys.update_many({"company_id": company_id}, {"$set": {"is_active": False}})
+    
+    return {
+        "success": True, 
+        "message": "Company soft deleted successfully. Data backed up for 6 months.",
+        "deleted_at": delete_time,
+        "restoration_deadline": delete_time.replace(month=delete_time.month + 6) if delete_time.month <= 6 else delete_time.replace(year=delete_time.year + 1, month=delete_time.month - 6)
+    }
+
+@api_router.post("/companies/{company_id}/restore")
+async def restore_company(
+    company_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Restore a soft-deleted company"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get the deleted company
+    company = await db.companies.find_one({"id": company_id, "tenant_id": tenant_id})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    if not company.get("deleted_at"):
+        raise HTTPException(status_code=400, detail="Company is not deleted")
+    
+    # Check if restoration deadline has passed (6 months)
+    delete_time = company["deleted_at"]
+    restoration_deadline = delete_time.replace(month=delete_time.month + 6) if delete_time.month <= 6 else delete_time.replace(year=delete_time.year + 1, month=delete_time.month - 6)
+    
+    if datetime.now(timezone.utc) > restoration_deadline:
+        raise HTTPException(status_code=400, detail="Restoration deadline has passed. Company data may have been permanently deleted.")
+    
+    # Restore the company
+    await db.companies.update_one(
+        {"id": company_id, "tenant_id": tenant_id},
+        {
+            "$set": {"is_active": True},
+            "$unset": {"deleted_at": "", "backup_data": ""}
+        }
+    )
+    
+    # Reactivate related data
+    await db.business_units.update_many({"company_id": company_id}, {"$set": {"is_active": True}})
+    await db.locations.update_many({"company_id": company_id}, {"$set": {"is_active": True}})
+    await db.accounts.update_many({"company_id": company_id}, {"$set": {"is_active": True}})
+    await db.api_keys.update_many({"company_id": company_id}, {"$set": {"is_active": True}})
+    
+    return {"success": True, "message": "Company restored successfully"}
+
+@api_router.get("/companies/deleted")
+async def get_deleted_companies(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all soft-deleted companies that can be restored"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get deleted companies that are still within restoration period
+    six_months_ago = datetime.now(timezone.utc) - timedelta(days=180)
+    
+    deleted_companies = await db.companies.find({
+        "tenant_id": tenant_id,
+        "deleted_at": {"$exists": True, "$gte": six_months_ago}
+    }).to_list(None)
+    
+    # Clean up and add restoration info
+    for company in deleted_companies:
+        company.pop("_id", None)
+        company.pop("backup_data", None)  # Don't send backup data in list
+        
+        # Add restoration deadline
+        delete_time = company["deleted_at"]
+        restoration_deadline = delete_time.replace(month=delete_time.month + 6) if delete_time.month <= 6 else delete_time.replace(year=delete_time.year + 1, month=delete_time.month - 6)
+        company["restoration_deadline"] = restoration_deadline
+        
+        # Add days remaining
+        days_remaining = (restoration_deadline - datetime.now(timezone.utc)).days
+        company["days_remaining"] = max(0, days_remaining)
+    
+    return deleted_companies
+
 # ============================================================================
 # BUSINESS UNIT MANAGEMENT
 # ============================================================================
