@@ -239,21 +239,13 @@ export default function Settings({ company }) {
                     </DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleCreateBU} className="space-y-4">
-                    <div>
-                      <Label>Company *</Label>
-                      <select
-                        value={buForm.company_id}
-                        onChange={(e) => setBUForm({ ...buForm, company_id: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                        required
-                      >
-                        <option value="">Select Company</option>
-                        {companies.map((company) => (
-                          <option key={company.id} value={company.id}>
-                            {company.name}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="p-3 bg-blue-50 rounded-md">
+                      <p className="text-sm text-blue-900">
+                        <strong>Company:</strong> {company.name}
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        This business unit will be created within the current company
+                      </p>
                     </div>
                     <div>
                       <Label>Business Unit Name *</Label>
