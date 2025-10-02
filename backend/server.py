@@ -1810,14 +1810,19 @@ async def create_business_unit(
         raise HTTPException(status_code=400, detail="Business unit code already exists")
     
     # Determine parent subsidiary for consolidation
-    parent_subsidiary_id = None
-    if company.get("parent_company_id"):
-        # If the company is a subsidiary, it rolls up to itself
+    parent_subsidiary_id = request.parent_subsidiary_id
+    if not parent_subsidiary_id and company.get("parent_company_id"):
+        # If the company is a subsidiary, it rolls up to itself by default
         parent_subsidiary_id = request.company_id
-    else:
-        # If the company is a parent, business unit can optionally link to a specific subsidiary
-        # For now, we'll set it to None and allow manual assignment later
-        parent_subsidiary_id = None
+    
+    # Validate parent_subsidiary_id if provided
+    if parent_subsidiary_id:
+        parent_subsidiary = await db.companies.find_one({
+            "id": parent_subsidiary_id,
+            "tenant_id": tenant_id
+        })
+        if not parent_subsidiary:
+            raise HTTPException(status_code=404, detail="Parent subsidiary not found")
     
     business_unit = BusinessUnit(
         tenant_id=tenant_id,
@@ -1827,7 +1832,7 @@ async def create_business_unit(
         code=request.code,
         description=request.description,
         manager_name=request.manager_name,
-        consolidation_enabled=True
+        consolidation_enabled=request.consolidation_enabled
     )
     
     bu_dict = business_unit.dict()
