@@ -2319,9 +2319,9 @@ INV-TEST-003,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Non Existent Account,Test
         try:
             # First create test accounts for categorization
             test_accounts = [
-                {"code": "4000", "name": "Sales Revenue", "account_type": "Revenue"},
-                {"code": "6100", "name": "Rent Expense", "account_type": "Expense"},
-                {"code": "6200", "name": "Utilities Expense", "account_type": "Expense"}
+                {"code": "4010", "name": "Test Sales Revenue", "account_type": "Revenue"},
+                {"code": "6110", "name": "Test Rent Expense", "account_type": "Expense"},
+                {"code": "6210", "name": "Test Utilities Expense", "account_type": "Expense"}
             ]
             
             created_account_ids = []
