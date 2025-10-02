@@ -1841,6 +1841,8 @@ class UpdateBusinessUnitRequest(BaseModel):
     code: Optional[str] = None
     description: Optional[str] = None
     manager_name: Optional[str] = None
+    parent_subsidiary_id: Optional[str] = None
+    consolidation_enabled: Optional[bool] = None
     is_active: Optional[bool] = None
 
 @api_router.put("/business-units/{bu_id}")
