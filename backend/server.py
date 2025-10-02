@@ -1595,6 +1595,7 @@ async def get_locations(
     
     # Enrich with company and BU names
     for loc in locations:
+        loc.pop("_id", None)  # Remove MongoDB _id
         company = await db.companies.find_one({"id": loc["company_id"]})
         loc["company_name"] = company["name"] if company else None
         
