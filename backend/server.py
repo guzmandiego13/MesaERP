@@ -2831,6 +2831,557 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ============================================================================
+# CSV IMPORT & TEMPLATE ENDPOINTS
+# ============================================================================
+
+@api_router.get("/templates/accounts/download")
+async def download_accounts_template(
+    current_user: dict = Depends(get_current_user)
+):
+    """Download accounts template CSV"""
+    # Create CSV content
+    csv_content = "account_name,description,account_type,account_code\n"
+    csv_content += "Cash,Main business checking account,Asset,1000\n"
+    csv_content += "Accounts Receivable,Money owed by customers,Asset,1200\n"
+    csv_content += "Inventory,Products in stock,Asset,1300\n"
+    csv_content += "Accounts Payable,Money owed to suppliers,Liability,2000\n"
+    csv_content += "Sales Revenue,Income from sales,Revenue,4000\n"
+    csv_content += "Cost of Goods Sold,Direct costs of products sold,Expense,5000\n"
+    csv_content += "Office Supplies,General office supplies expense,Expense,6100\n"
+    csv_content += "Utilities,Electricity and other utilities,Expense,6200\n"
+    
+    # Create file-like object
+    csv_buffer = io.StringIO(csv_content)
+    
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode()),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=accounts_template.csv"}
+    )
+
+@api_router.post("/accounts/upload-template")
+async def upload_accounts_template(
+    company_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload accounts template CSV and create accounts"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Validate file type
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+    
+    try:
+        # Read and parse CSV
+        contents = await file.read()
+        csv_data = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_data))
+        
+        created_accounts = []
+        errors = []
+        
+        for row_num, row in enumerate(csv_reader, start=2):
+            try:
+                # Validate required fields
+                if not row.get('account_name') or not row.get('account_type'):
+                    errors.append(f"Row {row_num}: Missing required fields (account_name, account_type)")
+                    continue
+                
+                # Check if account already exists
+                existing_account = await db.accounts.find_one({
+                    "tenant_id": tenant_id,
+                    "company_id": company_id,
+                    "name": row['account_name']
+                })
+                
+                if existing_account:
+                    errors.append(f"Row {row_num}: Account '{row['account_name']}' already exists")
+                    continue
+                
+                # Create account
+                account = {
+                    "id": str(uuid.uuid4()),
+                    "tenant_id": tenant_id,
+                    "company_id": company_id,
+                    "code": row.get('account_code', ''),
+                    "name": row['account_name'],
+                    "account_type": row['account_type'],
+                    "description": row.get('description', ''),
+                    "balance": 0.0,
+                    "is_active": True,
+                    "created_at": datetime.now(timezone.utc)
+                }
+                
+                await db.accounts.insert_one(account)
+                account.pop("_id", None)
+                created_accounts.append(account)
+                
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+        
+        return {
+            "success": True,
+            "created_accounts": len(created_accounts),
+            "accounts": created_accounts,
+            "errors": errors
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process CSV: {str(e)}")
+
+@api_router.get("/templates/cashflows/download")
+async def download_cashflows_template(
+    current_user: dict = Depends(get_current_user)
+):
+    """Download cash flows template CSV"""
+    csv_content = "invoice_id,accrual_date,cashflow_date,account_name,supplier_name,description,payment_method,amount,expense_type\n"
+    csv_content += "INV-001,2024-01-15,2024-01-15,Office Supplies,Staples,Office supplies purchase,cash,150.50,expense_pl\n"
+    csv_content += "INV-002,2024-01-16,2024-01-20,Equipment,Dell,Computer purchase,check,2500.00,capitalize_bs\n"
+    csv_content += ",2024-01-17,2024-01-17,Utilities,Electric Company,Monthly electricity,cash,85.00,expense_pl\n"
+    
+    return StreamingResponse(
+        io.BytesIO(csv_content.encode()),
+        media_type="text/csv", 
+        headers={"Content-Disposition": "attachment; filename=cashflows_template.csv"}
+    )
+
+@api_router.post("/cashflows/upload-template")
+async def upload_cashflows_template(
+    company_id: str,
+    business_unit_id: Optional[str] = None,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload cash flows template CSV and create journal entries"""
+    tenant_id = current_user["tenant_id"]
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+    
+    try:
+        contents = await file.read()
+        csv_data = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_data))
+        
+        created_cashflows = []
+        created_journal_entries = []
+        errors = []
+        
+        for row_num, row in enumerate(csv_reader, start=2):
+            try:
+                # Validate required fields
+                required_fields = ['accrual_date', 'cashflow_date', 'account_name', 'description', 'amount', 'expense_type']
+                missing_fields = [field for field in required_fields if not row.get(field)]
+                
+                if missing_fields:
+                    errors.append(f"Row {row_num}: Missing required fields: {', '.join(missing_fields)}")
+                    continue
+                
+                # Find account by name
+                account = await db.accounts.find_one({
+                    "tenant_id": tenant_id,
+                    "company_id": company_id,
+                    "name": row['account_name']
+                })
+                
+                if not account:
+                    errors.append(f"Row {row_num}: Account '{row['account_name']}' not found")
+                    continue
+                
+                # Parse dates and amount
+                try:
+                    accrual_date = datetime.fromisoformat(row['accrual_date']).replace(tzinfo=timezone.utc)
+                    cashflow_date = datetime.fromisoformat(row['cashflow_date']).replace(tzinfo=timezone.utc)
+                    amount = float(row['amount'])
+                except (ValueError, InvalidOperation) as e:
+                    errors.append(f"Row {row_num}: Invalid date or amount format: {str(e)}")
+                    continue
+                
+                # Create cash flow record
+                cashflow = CashFlow(
+                    tenant_id=tenant_id,
+                    company_id=company_id,
+                    business_unit_id=business_unit_id,
+                    invoice_id=row.get('invoice_id'),
+                    accrual_date=accrual_date,
+                    cashflow_date=cashflow_date,
+                    account_id=account["id"],
+                    supplier_name=row.get('supplier_name'),
+                    description=row['description'],
+                    payment_method=row.get('payment_method', 'cash'),
+                    amount=amount,
+                    expense_type=row['expense_type']
+                )
+                
+                # Get cash account for journal entry
+                cash_account = await db.accounts.find_one({
+                    "tenant_id": tenant_id,
+                    "company_id": company_id,
+                    "account_type": "Asset",
+                    "name": {"$regex": "cash", "$options": "i"}
+                })
+                
+                if not cash_account:
+                    errors.append(f"Row {row_num}: No cash account found for journal entry")
+                    continue
+                
+                # Create journal entry
+                journal_entry = {
+                    "id": str(uuid.uuid4()),
+                    "tenant_id": tenant_id,
+                    "company_id": company_id,
+                    "business_unit_id": business_unit_id,
+                    "entry_date": cashflow_date,
+                    "description": f"Cash flow: {row['description']}",
+                    "reference": row.get('invoice_id', f"CF-{cashflow.id[:8]}"),
+                    "is_posted": True,
+                    "lines": [],
+                    "created_at": datetime.now(timezone.utc)
+                }
+                
+                # Determine journal entry lines based on expense type
+                if row['expense_type'] == 'expense_pl':
+                    # Debit expense account, credit cash
+                    journal_entry["lines"] = [
+                        {
+                            "account_id": account["id"],
+                            "debit": amount,
+                            "credit": 0,
+                            "memo": f"Expense: {row['description']}"
+                        },
+                        {
+                            "account_id": cash_account["id"],
+                            "debit": 0,
+                            "credit": amount,
+                            "memo": f"Cash payment: {row['description']}"
+                        }
+                    ]
+                elif row['expense_type'] == 'capitalize_bs':
+                    # Debit asset account, credit cash
+                    journal_entry["lines"] = [
+                        {
+                            "account_id": account["id"],
+                            "debit": amount,
+                            "credit": 0,
+                            "memo": f"Asset purchase: {row['description']}"
+                        },
+                        {
+                            "account_id": cash_account["id"],
+                            "debit": 0,
+                            "credit": amount,
+                            "memo": f"Cash payment: {row['description']}"
+                        }
+                    ]
+                else:
+                    errors.append(f"Row {row_num}: Invalid expense_type. Must be 'expense_pl' or 'capitalize_bs'")
+                    continue
+                
+                # Save cash flow and journal entry
+                cashflow_dict = cashflow.dict()
+                await db.cashflows.insert_one(cashflow_dict)
+                
+                await db.journal_entries.insert_one(journal_entry)
+                
+                # Link journal entry to cash flow
+                await db.cashflows.update_one(
+                    {"id": cashflow.id},
+                    {"$set": {"journal_entry_id": journal_entry["id"]}}
+                )
+                
+                cashflow_dict.pop("_id", None)
+                journal_entry.pop("_id", None)
+                
+                created_cashflows.append(cashflow_dict)
+                created_journal_entries.append(journal_entry)
+                
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+        
+        return {
+            "success": True,
+            "created_cashflows": len(created_cashflows),
+            "created_journal_entries": len(created_journal_entries),
+            "cashflows": created_cashflows,
+            "journal_entries": created_journal_entries,
+            "errors": errors
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process CSV: {str(e)}")
+
+@api_router.post("/bank-statements/upload")
+async def upload_bank_statement(
+    company_id: str,
+    business_unit_id: Optional[str] = None,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Upload bank statement CSV for categorization"""
+    tenant_id = current_user["tenant_id"]
+    
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+    
+    try:
+        contents = await file.read()
+        csv_data = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_data))
+        
+        # Create bank statement record
+        bank_statement = BankStatement(
+            tenant_id=tenant_id,
+            company_id=company_id,
+            business_unit_id=business_unit_id,
+            upload_filename=file.filename,
+            total_transactions=0
+        )
+        
+        transactions = []
+        errors = []
+        
+        for row_num, row in enumerate(csv_reader, start=2):
+            try:
+                # Expected columns: date, description, amount, type (or auto-detect from amount sign)
+                if not all(key in row for key in ['date', 'description', 'amount']):
+                    errors.append(f"Row {row_num}: Missing required columns (date, description, amount)")
+                    continue
+                
+                # Parse transaction
+                try:
+                    transaction_date = datetime.fromisoformat(row['date']).replace(tzinfo=timezone.utc)
+                    amount = float(row['amount'])
+                    
+                    # Determine transaction type
+                    transaction_type = row.get('type', '').lower()
+                    if not transaction_type:
+                        transaction_type = 'credit' if amount > 0 else 'debit'
+                        amount = abs(amount)  # Make amount positive
+                    
+                except (ValueError, InvalidOperation) as e:
+                    errors.append(f"Row {row_num}: Invalid date or amount: {str(e)}")
+                    continue
+                
+                transaction = BankTransaction(
+                    tenant_id=tenant_id,
+                    company_id=company_id,
+                    business_unit_id=business_unit_id,
+                    bank_statement_id=bank_statement.id,
+                    transaction_date=transaction_date,
+                    description=row['description'],
+                    amount=amount,
+                    transaction_type=transaction_type
+                )
+                
+                transactions.append(transaction.dict())
+                
+            except Exception as e:
+                errors.append(f"Row {row_num}: {str(e)}")
+        
+        # Update total transactions count
+        bank_statement.total_transactions = len(transactions)
+        
+        # Save bank statement and transactions
+        bank_statement_dict = bank_statement.dict()
+        await db.bank_statements.insert_one(bank_statement_dict)
+        
+        if transactions:
+            await db.bank_transactions.insert_many(transactions)
+        
+        bank_statement_dict.pop("_id", None)
+        for transaction in transactions:
+            transaction.pop("_id", None)
+        
+        return {
+            "success": True,
+            "bank_statement": bank_statement_dict,
+            "transactions_count": len(transactions),
+            "transactions": transactions[:10],  # Return first 10 for preview
+            "errors": errors
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to process bank statement: {str(e)}")
+
+@api_router.get("/bank-statements")
+async def get_bank_statements(
+    company_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get uploaded bank statements"""
+    query = {"tenant_id": current_user["tenant_id"]}
+    if company_id:
+        query["company_id"] = company_id
+    
+    statements = await db.bank_statements.find(query).to_list(100)
+    
+    for statement in statements:
+        statement.pop("_id", None)
+    
+    return statements
+
+@api_router.get("/bank-statements/{statement_id}/transactions")
+async def get_bank_transactions(
+    statement_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get transactions for a bank statement"""
+    tenant_id = current_user["tenant_id"]
+    
+    transactions = await db.bank_transactions.find({
+        "tenant_id": tenant_id,
+        "bank_statement_id": statement_id
+    }).to_list(1000)
+    
+    for transaction in transactions:
+        transaction.pop("_id", None)
+        
+        # Add account info if categorized
+        if transaction.get("account_id"):
+            account = await db.accounts.find_one({"id": transaction["account_id"]})
+            if account:
+                transaction["account_name"] = account["name"]
+    
+    return transactions
+
+@api_router.post("/bank-transactions/categorize")
+async def categorize_bank_transactions(
+    categorizations: List[BankTransactionCategorization],
+    current_user: dict = Depends(get_current_user)
+):
+    """Categorize multiple bank transactions"""
+    tenant_id = current_user["tenant_id"]
+    updated_count = 0
+    
+    for cat in categorizations:
+        result = await db.bank_transactions.update_one(
+            {
+                "id": cat.transaction_id,
+                "tenant_id": tenant_id
+            },
+            {
+                "$set": {
+                    "account_id": cat.account_id,
+                    "category": cat.category,
+                    "notes": cat.notes,
+                    "is_categorized": True
+                }
+            }
+        )
+        
+        if result.modified_count > 0:
+            updated_count += 1
+    
+    return {
+        "success": True,
+        "updated_transactions": updated_count
+    }
+
+@api_router.post("/bank-transactions/{statement_id}/create-journal-entries")
+async def create_journal_entries_from_bank_transactions(
+    statement_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create journal entries from categorized bank transactions"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get categorized transactions
+    transactions = await db.bank_transactions.find({
+        "tenant_id": tenant_id,
+        "bank_statement_id": statement_id,
+        "is_categorized": True,
+        "journal_entry_id": None  # Only uncategorized transactions
+    }).to_list(1000)
+    
+    if not transactions:
+        raise HTTPException(status_code=400, detail="No categorized transactions found")
+    
+    # Get cash account
+    cash_account = await db.accounts.find_one({
+        "tenant_id": tenant_id,
+        "company_id": transactions[0]["company_id"],
+        "account_type": "Asset",
+        "name": {"$regex": "cash", "$options": "i"}
+    })
+    
+    if not cash_account:
+        raise HTTPException(status_code=400, detail="No cash account found")
+    
+    created_entries = []
+    
+    for transaction in transactions:
+        # Get account info
+        account = await db.accounts.find_one({"id": transaction["account_id"]})
+        if not account:
+            continue
+        
+        # Create journal entry
+        journal_entry = {
+            "id": str(uuid.uuid4()),
+            "tenant_id": tenant_id,
+            "company_id": transaction["company_id"],
+            "business_unit_id": transaction.get("business_unit_id"),
+            "entry_date": transaction["transaction_date"],
+            "description": f"Bank: {transaction['description']}",
+            "reference": f"BANK-{transaction['id'][:8]}",
+            "is_posted": True,
+            "lines": [],
+            "created_at": datetime.now(timezone.utc)
+        }
+        
+        # Determine journal entry lines based on transaction type
+        if transaction["transaction_type"] == "credit":
+            # Money coming in (debit cash, credit account)
+            journal_entry["lines"] = [
+                {
+                    "account_id": cash_account["id"],
+                    "debit": transaction["amount"],
+                    "credit": 0,
+                    "memo": f"Bank deposit: {transaction['description']}"
+                },
+                {
+                    "account_id": account["id"],
+                    "debit": 0,
+                    "credit": transaction["amount"],
+                    "memo": f"Revenue: {transaction['description']}"
+                }
+            ]
+        else:  # debit
+            # Money going out (debit account, credit cash)
+            journal_entry["lines"] = [
+                {
+                    "account_id": account["id"],
+                    "debit": transaction["amount"],
+                    "credit": 0,
+                    "memo": f"Expense: {transaction['description']}"
+                },
+                {
+                    "account_id": cash_account["id"],
+                    "debit": 0,
+                    "credit": transaction["amount"],
+                    "memo": f"Bank payment: {transaction['description']}"
+                }
+            ]
+        
+        # Save journal entry
+        await db.journal_entries.insert_one(journal_entry)
+        
+        # Link back to transaction
+        await db.bank_transactions.update_one(
+            {"id": transaction["id"]},
+            {"$set": {"journal_entry_id": journal_entry["id"]}}
+        )
+        
+        journal_entry.pop("_id", None)
+        created_entries.append(journal_entry)
+    
+    return {
+        "success": True,
+        "created_entries": len(created_entries),
+        "journal_entries": created_entries
+    }
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
