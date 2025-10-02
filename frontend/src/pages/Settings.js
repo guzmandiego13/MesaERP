@@ -841,7 +841,8 @@ export default function Settings({ company }) {
                     Deleted ({deletedBusinessUnits.length})
                   </Button>
                 )}
-                <Dialog open={showBUDialog} onOpenChange={setShowBUDialog}>
+              </div>
+              <Dialog open={showBUDialog} onOpenChange={setShowBUDialog}>
                 <DialogTrigger asChild>
                   <Button data-testid="create-business-unit">
                     <Plus className="w-4 h-4 mr-2" />
