@@ -493,8 +493,73 @@ export default function Finance() {
 
         <TabsContent value="coa">
           <Card data-testid="coa-list">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Chart of Accounts</CardTitle>
+              <Dialog open={showAccountDialog} onOpenChange={setShowAccountDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm" onClick={() => {
+                    setEditingAccount(null);
+                    setAccountForm({ code: "", name: "", account_type: "Asset" });
+                  }}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingAccount ? 'Edit Account' : 'Add New Account'}</DialogTitle>
+                    <DialogDescription>
+                      {editingAccount ? 'Update account details' : 'Create a new account in your chart of accounts'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateAccount} className="space-y-4">
+                    <div>
+                      <Label htmlFor="account-code">Account Code</Label>
+                      <Input
+                        id="account-code"
+                        value={accountForm.code}
+                        onChange={(e) => setAccountForm({ ...accountForm, code: e.target.value })}
+                        placeholder="1000"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="account-name">Account Name</Label>
+                      <Input
+                        id="account-name"
+                        value={accountForm.name}
+                        onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+                        placeholder="Cash in Bank"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="account-type">Account Type</Label>
+                      <select
+                        id="account-type"
+                        value={accountForm.account_type}
+                        onChange={(e) => setAccountForm({ ...accountForm, account_type: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                        required
+                      >
+                        <option value="Asset">Asset</option>
+                        <option value="Liability">Liability</option>
+                        <option value="Equity">Equity</option>
+                        <option value="Revenue">Revenue</option>
+                        <option value="Expense">Expense</option>
+                      </select>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setShowAccountDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit">
+                        {editingAccount ? 'Update' : 'Create'} Account
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -505,6 +570,7 @@ export default function Finance() {
                       <th className="text-left py-3 px-4 font-semibold text-slate-700">Account Name</th>
                       <th className="text-left py-3 px-4 font-semibold text-slate-700">Type</th>
                       <th className="text-left py-3 px-4 font-semibold text-slate-700">Status</th>
+                      <th className="text-left py-3 px-4 font-semibold text-slate-700">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -519,6 +585,16 @@ export default function Finance() {
                           }`}>
                             {account.is_active ? 'Active' : 'Inactive'}
                           </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditAccount(account)}
+                            data-testid={`edit-account-${account.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
                         </td>
                       </tr>
                     ))}
