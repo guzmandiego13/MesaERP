@@ -459,22 +459,118 @@ export default function Settings({ company }) {
               {subsidiaries.length > 0 ? (
                 <div className="space-y-3">
                   {subsidiaries.map((sub) => (
-                    <div key={sub.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <Building2 className="w-8 h-8 text-indigo-600" />
-                        <div>
-                          <h3 className="font-semibold text-slate-900">{sub.name}</h3>
-                          <p className="text-sm text-slate-600 capitalize">{sub.industry}</p>
-                          {sub.tax_id && (
-                            <p className="text-xs text-slate-500 mt-1">Tax ID: {sub.tax_id}</p>
-                          )}
+                    <div key={sub.id} className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                      {editingCompany === sub.id ? (
+                        // Edit mode
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Building2 className="w-8 h-8 text-indigo-600" />
+                            <h4 className="font-semibold text-slate-900">Editing Subsidiary</h4>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                              <input
+                                type="text"
+                                value={companyForm.name}
+                                onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Industry</label>
+                              <select
+                                value={companyForm.industry}
+                                onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="restaurant">Restaurant</option>
+                                <option value="retail">Retail</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Tax ID</label>
+                              <input
+                                type="text"
+                                value={companyForm.tax_id}
+                                onChange={(e) => setCompanyForm({ ...companyForm, tax_id: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="XX-XXXXXXX"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Accounting Basis</label>
+                              <select
+                                value={companyForm.accounting_basis}
+                                onChange={(e) => setCompanyForm({ ...companyForm, accounting_basis: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="Accrual">Accrual</option>
+                                <option value="Cash">Cash</option>
+                              </select>
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-end gap-2 pt-2">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={handleCancelCompanyEdit}
+                              className="flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Cancel
+                            </Button>
+                            <Button 
+                              onClick={() => handleUpdateCompany(sub.id)}
+                              className="flex items-center gap-2"
+                            >
+                              <Save className="w-4 h-4" />
+                              Save
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
-                          Subsidiary
-                        </span>
-                      </div>
+                      ) : (
+                        // View mode
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Building2 className="w-8 h-8 text-indigo-600" />
+                            <div>
+                              <h3 className="font-semibold text-slate-900">{sub.name}</h3>
+                              <p className="text-sm text-slate-600 capitalize">{sub.industry}</p>
+                              {sub.tax_id && (
+                                <p className="text-xs text-slate-500 mt-1">Tax ID: {sub.tax_id}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                              Subsidiary
+                            </span>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditCompany(sub.id)}
+                                className="p-2 h-8 w-8"
+                                title="Edit subsidiary"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteCompany(sub.id)}
+                                className="p-2 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Delete subsidiary"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
