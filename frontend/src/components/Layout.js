@@ -48,10 +48,16 @@ export default function Layout({ user, tenant, company, onLogout, onChangeCompan
           {branding?.logo_url ? (
             <div className="mb-3">
               <img 
-                src={branding.logo_url} 
+                src={branding.logo_url.startsWith('/') ? `${BACKEND_URL}${branding.logo_url}` : branding.logo_url}
                 alt={`${company?.name} logo`}
-                className="h-12 object-contain"
-                onError={(e) => e.target.style.display = 'none'}
+                className="h-12 object-contain max-w-full"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const fallback = document.createElement('h1');
+                  fallback.className = 'text-2xl font-bold text-slate-900';
+                  fallback.textContent = 'MesaERP';
+                  e.target.parentElement.appendChild(fallback);
+                }}
               />
             </div>
           ) : (
