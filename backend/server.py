@@ -1525,6 +1525,7 @@ async def get_business_units(
     
     # Enrich with company name
     for bu in business_units:
+        bu.pop("_id", None)  # Remove MongoDB _id
         company = await db.companies.find_one({"id": bu["company_id"]})
         bu["company_name"] = company["name"] if company else None
     
