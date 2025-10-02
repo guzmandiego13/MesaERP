@@ -363,6 +363,71 @@ class DashboardMetrics(BaseModel):
     stockouts_count: int
 
 # ============================================================================
+# CSV IMPORT MODELS
+# ============================================================================
+
+class AccountTemplate(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    company_id: str
+    account_name: str
+    description: str
+    account_type: str  # Asset, Liability, Equity, Revenue, Expense
+    account_code: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BankStatement(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    company_id: str
+    business_unit_id: Optional[str] = None
+    upload_filename: str
+    upload_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    total_transactions: int
+    categorized_transactions: int = 0
+    status: str = "uploaded"  # uploaded, categorizing, completed
+    
+class BankTransaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    company_id: str
+    business_unit_id: Optional[str] = None
+    bank_statement_id: str
+    transaction_date: datetime
+    description: str
+    amount: float
+    transaction_type: str  # "debit" or "credit" 
+    account_id: Optional[str] = None  # For categorization
+    category: Optional[str] = None
+    notes: Optional[str] = None
+    is_categorized: bool = False
+    journal_entry_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CashFlow(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    company_id: str
+    business_unit_id: Optional[str] = None
+    invoice_id: Optional[str] = None
+    accrual_date: datetime
+    cashflow_date: datetime
+    account_id: str
+    supplier_name: Optional[str] = None
+    description: str
+    payment_method: str  # cash, check, credit_card, wire_transfer, etc.
+    amount: float
+    expense_type: str  # "expense_pl" or "capitalize_bs"
+    journal_entry_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BankTransactionCategorization(BaseModel):
+    transaction_id: str
+    account_id: str
+    category: Optional[str] = None
+    notes: Optional[str] = None
+
+# ============================================================================
 # AUTH HELPERS
 # ============================================================================
 
