@@ -838,22 +838,25 @@ async def create_journal_entry(
             detail=f"Journal entry is not balanced. Debits: {total_debits}, Credits: {total_credits}"
         )
     
-    # Verify all accounts exist
-    for line in lines:
+    # Verify all accounts exist and belong to the same company
+    for line in request.lines:
         account = await db.accounts.find_one({
             "id": line["account_id"],
-            "tenant_id": tenant_id
+            "tenant_id": tenant_id,
+            "company_id": request.company_id
         })
         if not account:
-            raise HTTPException(status_code=404, detail=f"Account {line['account_id']} not found")
+            raise HTTPException(status_code=404, detail=f"Account {line['account_id']} not found in this company")
     
     je = JournalEntry(
         tenant_id=tenant_id,
-        entry_date=datetime.fromisoformat(entry_date),
-        description=description,
-        reference=reference,
+        company_id=request.company_id,
+        business_unit_id=request.business_unit_id,
+        entry_date=datetime.fromisoformat(request.entry_date),
+        description=request.description,
+        reference=request.reference,
         is_posted=True,
-        lines=lines
+        lines=request.lines
     )
     
     await db.journal_entries.insert_one(je.dict())
