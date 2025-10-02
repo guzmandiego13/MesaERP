@@ -141,6 +141,85 @@ export default function Settings({ company }) {
       toast.error(error.response?.data?.detail || "Failed to create business unit");
     }
   };
+  
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/users`, userForm, { headers });
+      toast.success("User created successfully");
+      setShowUserDialog(false);
+      setUserForm({
+        email: "",
+        password: "",
+        name: "",
+        role: "Analyst",
+        permissions: {
+          view_dashboard: true,
+          manage_information: false,
+          manage_accounts_ledger: false,
+          full_access: false
+        }
+      });
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to create user");
+    }
+  };
+  
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Are you sure you want to delete this user?")) return;
+    
+    try {
+      await axios.delete(`${API}/users/${userId}`, { headers });
+      toast.success("User deleted");
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete user");
+    }
+  };
+  
+  const handleCreateAPIKey = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/api-keys/${company.id}`, apiForm, { headers });
+      toast.success("API key added successfully");
+      setShowAPIDialog(false);
+      setAPIForm({
+        name: "",
+        service_type: "parrot_pos",
+        api_key: "",
+        api_secret: ""
+      });
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to add API key");
+    }
+  };
+  
+  const handleDeleteAPIKey = async (keyId) => {
+    if (!window.confirm("Are you sure you want to delete this API key?")) return;
+    
+    try {
+      await axios.delete(`${API}/api-keys/${keyId}`, { headers });
+      toast.success("API key deleted");
+      loadData();
+    } catch (error) {
+      toast.error("Failed to delete API key");
+    }
+  };
+  
+  const handleUpdateBranding = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.put(`${API}/branding/${company.id}`, brandingForm, { headers });
+      setBranding(response.data);
+      toast.success("Branding updated successfully");
+      // Reload to apply new branding
+      window.location.reload();
+    } catch (error) {
+      toast.error("Failed to update branding");
+    }
+  };
 
   return (
     <div className="p-8 space-y-6" data-testid="settings-page">
