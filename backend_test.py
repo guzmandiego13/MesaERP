@@ -2480,7 +2480,7 @@ INV-TEST-003,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Non Existent Account,Test
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print("🚀 Starting Backend API Tests for Business Unit Soft Delete and Enhanced User Management")
+        print("🚀 Starting Backend API Tests for Company Management & CSV Import System")
         print("=" * 80)
         
         # Authentication
