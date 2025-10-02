@@ -2207,9 +2207,8 @@ INV-TEST-002,2024-01-16T00:00:00Z,2024-01-20T00:00:00Z,Test Equipment,Dell Compu
 INV-TEST-003,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Non Existent Account,Test Supplier,Test transaction,cash,100.00,expense_pl"""
             
             files = {'file': ('test_missing_account.csv', csv_content, 'text/csv')}
-            data = {'company_id': self.test_company_id}
             
-            response = self.session.post(f"{BASE_URL}/cashflows/upload-template", files=files, data=data)
+            response = self.session.post(f"{BASE_URL}/cashflows/upload-template?company_id={self.test_company_id}", files=files)
             
             if response.status_code == 200:
                 data = response.json()
