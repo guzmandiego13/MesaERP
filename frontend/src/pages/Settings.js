@@ -1182,55 +1182,19 @@ export default function Settings({ company }) {
                     </div>
                     <div className="border-t pt-4">
                       <h4 className="font-semibold mb-3">Permissions</h4>
-                      <div className="space-y-3">
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={userForm.permissions.view_dashboard}
-                            onChange={(e) => setUserForm({
-                              ...userForm,
-                              permissions: { ...userForm.permissions, view_dashboard: e.target.checked }
-                            })}
-                            className="w-4 h-4"
-                          />
-                          <span className="text-sm">View Dashboard (read-only access to visuals)</span>
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={userForm.permissions.manage_information}
-                            onChange={(e) => setUserForm({
-                              ...userForm,
-                              permissions: { ...userForm.permissions, manage_information: e.target.checked }
-                            })}
-                            className="w-4 h-4"
-                          />
-                          <span className="text-sm">Manage Information (edit data, create records)</span>
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={userForm.permissions.manage_accounts_ledger}
-                            onChange={(e) => setUserForm({
-                              ...userForm,
-                              permissions: { ...userForm.permissions, manage_accounts_ledger: e.target.checked }
-                            })}
-                            className="w-4 h-4"
-                          />
-                          <span className="text-sm">Manage Accounts & Ledger (add/delete accounts, journal entries)</span>
-                        </label>
-                        <label className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={userForm.permissions.full_access}
-                            onChange={(e) => setUserForm({
-                              ...userForm,
-                              permissions: { ...userForm.permissions, full_access: e.target.checked }
-                            })}
-                            className="w-4 h-4"
-                          />
-                          <span className="text-sm font-semibold">Full Access (all features and settings)</span>
-                        </label>
+                      <div className="max-h-64 overflow-y-auto space-y-4">
+                        {Object.entries(permissionGroups).map(([groupName, permissions]) => (
+                          <div key={groupName} className="space-y-2">
+                            <h5 className="text-sm font-semibold text-slate-700 border-b border-slate-200 pb-1">
+                              {groupName}
+                            </h5>
+                            <div className="space-y-2 pl-2">
+                              {permissions.map(permission => 
+                                renderPermissionCheckbox(permission.key, permission.label, permission.description)
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 pt-4">
