@@ -693,16 +693,23 @@ async def update_account(
     updated_account = await db.accounts.find_one({"id": account_id, "tenant_id": tenant_id})
     return updated_account
 
+class CreateJournalEntryRequest(BaseModel):
+    entry_date: str
+    description: str
+    lines: List[Dict[str, Any]]
+    reference: Optional[str] = None
+
 @api_router.post("/finance/journal-entries")
 async def create_journal_entry(
-    entry_date: str,
-    description: str,
-    lines: List[Dict[str, Any]],
-    reference: Optional[str] = None,
+    request: CreateJournalEntryRequest,
     current_user: dict = Depends(get_current_user)
 ):
     """Create a manual journal entry"""
     tenant_id = current_user["tenant_id"]
+    entry_date = request.entry_date
+    description = request.description
+    lines = request.lines
+    reference = request.reference
     
     # Validate lines balance (debits = credits)
     total_debits = sum(line.get("debit", 0) for line in lines)
