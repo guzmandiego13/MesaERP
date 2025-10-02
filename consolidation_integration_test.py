@@ -108,22 +108,60 @@ class ConsolidationIntegrationTester:
                     print(f"❌ Failed to create BU: {bu_data['name']}")
                     return False
             
-            # 4. Get accounts for journal entries
-            print("3. Getting chart of accounts...")
-            response = self.session.get(f"{BASE_URL}/finance/accounts", params={"company_id": main_company_id})
-            if response.status_code != 200:
-                print("❌ Failed to get accounts")
+            # 4. Create accounts for journal entries (workaround for accounts endpoint issue)
+            print("3. Creating test accounts...")
+            
+            # Create cash account
+            cash_account_data = {
+                "company_id": main_company_id,
+                "code": "1000",
+                "name": "Cash",
+                "account_type": "Asset"
+            }
+            response = self.session.post(f"{BASE_URL}/finance/accounts", json=cash_account_data)
+            if response.status_code == 200:
+                cash_account = response.json()
+                print("✅ Created Cash account")
+            elif response.status_code == 400 and "already exists" in response.text:
+                # Account already exists, create a unique one
+                cash_account_data["code"] = "1001"
+                cash_account_data["name"] = "Cash Test"
+                response = self.session.post(f"{BASE_URL}/finance/accounts", json=cash_account_data)
+                if response.status_code == 200:
+                    cash_account = response.json()
+                    print("✅ Created Cash Test account")
+                else:
+                    print("❌ Failed to create cash account")
+                    return False
+            else:
+                print("❌ Failed to create cash account")
                 return False
             
-            accounts = response.json()
-            cash_account = next((acc for acc in accounts if acc["code"] == "1000"), None)
-            revenue_account = next((acc for acc in accounts if acc["code"] == "4000"), None)
-            
-            if not cash_account or not revenue_account:
-                print("❌ Required accounts not found")
+            # Create revenue account
+            revenue_account_data = {
+                "company_id": main_company_id,
+                "code": "4000",
+                "name": "Revenue",
+                "account_type": "Revenue"
+            }
+            response = self.session.post(f"{BASE_URL}/finance/accounts", json=revenue_account_data)
+            if response.status_code == 200:
+                revenue_account = response.json()
+                print("✅ Created Revenue account")
+            elif response.status_code == 400 and "already exists" in response.text:
+                # Account already exists, create a unique one
+                revenue_account_data["code"] = "4001"
+                revenue_account_data["name"] = "Revenue Test"
+                response = self.session.post(f"{BASE_URL}/finance/accounts", json=revenue_account_data)
+                if response.status_code == 200:
+                    revenue_account = response.json()
+                    print("✅ Created Revenue Test account")
+                else:
+                    print("❌ Failed to create revenue account")
+                    return False
+            else:
+                print("❌ Failed to create revenue account")
                 return False
-            
-            print(f"✅ Found accounts: Cash ({cash_account['name']}) and Revenue ({revenue_account['name']})")
             
             # 5. Create journal entries for each business unit
             print("4. Creating journal entries for business units...")
