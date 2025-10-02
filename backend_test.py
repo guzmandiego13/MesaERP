@@ -445,6 +445,361 @@ class BackendTester:
         except Exception as e:
             self.log_result("Unauthorized Access", False, f"Error: {str(e)}")
             return False
+
+    def test_soft_delete_company(self):
+        """Test soft delete company endpoint"""
+        try:
+            # Create a company for soft delete test
+            company_data = {
+                "name": "Company for Soft Delete Test",
+                "industry": "retail"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=company_data)
+            
+            if response.status_code != 200:
+                self.log_result("Soft Delete Company", False, "Failed to create company for soft delete test")
+                return False
+            
+            company = response.json()
+            company_id = company["id"]
+            
+            # Soft delete the company
+            response = self.session.post(f"{BASE_URL}/companies/{company_id}/soft-delete")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") == True and "deleted_at" in data and "restoration_deadline" in data:
+                    self.log_result("Soft Delete Company", True, "Company soft deleted successfully with backup")
+                    return True
+                else:
+                    self.log_result("Soft Delete Company", False, "Soft delete response missing required fields", data)
+                    return False
+            else:
+                self.log_result("Soft Delete Company", False, f"Soft delete failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Soft Delete Company", False, f"Error: {str(e)}")
+            return False
+
+    def test_soft_delete_company_with_subsidiaries(self):
+        """Test soft delete validation when company has subsidiaries"""
+        try:
+            # Create a parent company
+            parent_data = {
+                "name": "Parent Company for Soft Delete Test",
+                "industry": "restaurant"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=parent_data)
+            
+            if response.status_code != 200:
+                self.log_result("Soft Delete Company with Subsidiaries", False, "Failed to create parent company")
+                return False
+            
+            parent_company = response.json()
+            parent_id = parent_company["id"]
+            
+            # Create a subsidiary
+            subsidiary_data = {
+                "name": "Subsidiary for Soft Delete Test",
+                "industry": "restaurant",
+                "parent_company_id": parent_id
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=subsidiary_data)
+            
+            if response.status_code != 200:
+                # Clean up parent
+                self.session.delete(f"{BASE_URL}/companies/{parent_id}")
+                self.log_result("Soft Delete Company with Subsidiaries", False, "Failed to create subsidiary")
+                return False
+            
+            subsidiary_company = response.json()
+            subsidiary_id = subsidiary_company["id"]
+            
+            # Try to soft delete parent company (should fail)
+            response = self.session.post(f"{BASE_URL}/companies/{parent_id}/soft-delete")
+            
+            # Clean up - delete subsidiary first, then parent
+            self.session.delete(f"{BASE_URL}/companies/{subsidiary_id}")
+            self.session.delete(f"{BASE_URL}/companies/{parent_id}")
+            
+            if response.status_code == 400:
+                self.log_result("Soft Delete Company with Subsidiaries", True, "Correctly prevented soft deletion of company with subsidiaries")
+                return True
+            else:
+                self.log_result("Soft Delete Company with Subsidiaries", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Soft Delete Company with Subsidiaries", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_companies_excludes_deleted(self):
+        """Test that GET /companies excludes soft-deleted companies"""
+        try:
+            # Get initial company count
+            response = self.session.get(f"{BASE_URL}/companies")
+            if response.status_code != 200:
+                self.log_result("Get Companies Excludes Deleted", False, "Failed to get companies")
+                return False
+            
+            initial_companies = response.json()
+            initial_count = len(initial_companies)
+            
+            # Create a company for soft delete test
+            company_data = {
+                "name": "Company to Hide After Delete",
+                "industry": "retail"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=company_data)
+            
+            if response.status_code != 200:
+                self.log_result("Get Companies Excludes Deleted", False, "Failed to create test company")
+                return False
+            
+            company = response.json()
+            company_id = company["id"]
+            
+            # Verify company appears in list
+            response = self.session.get(f"{BASE_URL}/companies")
+            companies_after_create = response.json()
+            
+            if len(companies_after_create) != initial_count + 1:
+                self.log_result("Get Companies Excludes Deleted", False, "Company not found in list after creation")
+                return False
+            
+            # Soft delete the company
+            response = self.session.post(f"{BASE_URL}/companies/{company_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("Get Companies Excludes Deleted", False, "Failed to soft delete company")
+                return False
+            
+            # Verify company no longer appears in list
+            response = self.session.get(f"{BASE_URL}/companies")
+            companies_after_delete = response.json()
+            
+            if len(companies_after_delete) == initial_count:
+                self.log_result("Get Companies Excludes Deleted", True, "Soft-deleted company correctly excluded from companies list")
+                return True
+            else:
+                self.log_result("Get Companies Excludes Deleted", False, f"Expected {initial_count} companies, got {len(companies_after_delete)}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Companies Excludes Deleted", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_deleted_companies(self):
+        """Test GET /companies/deleted endpoint"""
+        try:
+            # Create a company for soft delete test
+            company_data = {
+                "name": "Company for Deleted List Test",
+                "industry": "retail"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=company_data)
+            
+            if response.status_code != 200:
+                self.log_result("Get Deleted Companies", False, "Failed to create test company")
+                return False
+            
+            company = response.json()
+            company_id = company["id"]
+            company_name = company["name"]
+            
+            # Soft delete the company
+            response = self.session.post(f"{BASE_URL}/companies/{company_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("Get Deleted Companies", False, "Failed to soft delete company")
+                return False
+            
+            # Get deleted companies list
+            response = self.session.get(f"{BASE_URL}/companies/deleted")
+            
+            if response.status_code == 200:
+                deleted_companies = response.json()
+                
+                # Find our deleted company in the list
+                found_company = None
+                for deleted_company in deleted_companies:
+                    if deleted_company["id"] == company_id:
+                        found_company = deleted_company
+                        break
+                
+                if found_company:
+                    # Verify required fields are present
+                    required_fields = ["id", "name", "deleted_at", "restoration_deadline"]
+                    missing_fields = [field for field in required_fields if field not in found_company]
+                    
+                    if not missing_fields:
+                        self.log_result("Get Deleted Companies", True, "Deleted company found with all required restoration info")
+                        return True
+                    else:
+                        self.log_result("Get Deleted Companies", False, f"Missing fields in deleted company: {missing_fields}")
+                        return False
+                else:
+                    self.log_result("Get Deleted Companies", False, "Soft-deleted company not found in deleted companies list")
+                    return False
+            else:
+                self.log_result("Get Deleted Companies", False, f"Failed to get deleted companies: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Deleted Companies", False, f"Error: {str(e)}")
+            return False
+
+    def test_restore_company(self):
+        """Test company restoration endpoint"""
+        try:
+            # Create a company for restore test
+            company_data = {
+                "name": "Company for Restore Test",
+                "industry": "retail"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=company_data)
+            
+            if response.status_code != 200:
+                self.log_result("Restore Company", False, "Failed to create test company")
+                return False
+            
+            company = response.json()
+            company_id = company["id"]
+            
+            # Soft delete the company
+            response = self.session.post(f"{BASE_URL}/companies/{company_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("Restore Company", False, "Failed to soft delete company")
+                return False
+            
+            # Restore the company
+            response = self.session.post(f"{BASE_URL}/companies/{company_id}/restore")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") == True:
+                    # Verify company appears in active companies list again
+                    response = self.session.get(f"{BASE_URL}/companies")
+                    if response.status_code == 200:
+                        companies = response.json()
+                        restored_company = None
+                        for comp in companies:
+                            if comp["id"] == company_id:
+                                restored_company = comp
+                                break
+                        
+                        if restored_company and restored_company.get("is_active") == True:
+                            # Clean up
+                            self.session.delete(f"{BASE_URL}/companies/{company_id}")
+                            self.log_result("Restore Company", True, "Company restored successfully and appears in active list")
+                            return True
+                        else:
+                            self.log_result("Restore Company", False, "Restored company not found in active companies list")
+                            return False
+                    else:
+                        self.log_result("Restore Company", False, "Failed to verify restoration")
+                        return False
+                else:
+                    self.log_result("Restore Company", False, "Restore response missing success flag", data)
+                    return False
+            else:
+                self.log_result("Restore Company", False, f"Restore failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Restore Company", False, f"Error: {str(e)}")
+            return False
+
+    def test_restore_non_deleted_company(self):
+        """Test restore endpoint on non-deleted company"""
+        try:
+            if not self.test_company_id:
+                self.log_result("Restore Non-Deleted Company", False, "No test company ID available")
+                return False
+            
+            # Try to restore a company that's not deleted
+            response = self.session.post(f"{BASE_URL}/companies/{self.test_company_id}/restore")
+            
+            if response.status_code == 400:
+                self.log_result("Restore Non-Deleted Company", True, "Correctly returned 400 for non-deleted company")
+                return True
+            else:
+                self.log_result("Restore Non-Deleted Company", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Restore Non-Deleted Company", False, f"Error: {str(e)}")
+            return False
+
+    def test_soft_delete_already_deleted_company(self):
+        """Test soft delete on already deleted company"""
+        try:
+            # Create a company for test
+            company_data = {
+                "name": "Company for Double Delete Test",
+                "industry": "retail"
+            }
+            response = self.session.post(f"{BASE_URL}/companies", json=company_data)
+            
+            if response.status_code != 200:
+                self.log_result("Soft Delete Already Deleted", False, "Failed to create test company")
+                return False
+            
+            company = response.json()
+            company_id = company["id"]
+            
+            # Soft delete the company
+            response = self.session.post(f"{BASE_URL}/companies/{company_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("Soft Delete Already Deleted", False, "Failed to soft delete company")
+                return False
+            
+            # Try to soft delete again
+            response = self.session.post(f"{BASE_URL}/companies/{company_id}/soft-delete")
+            
+            if response.status_code == 400:
+                self.log_result("Soft Delete Already Deleted", True, "Correctly prevented double soft delete")
+                return True
+            else:
+                self.log_result("Soft Delete Already Deleted", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Soft Delete Already Deleted", False, f"Error: {str(e)}")
+            return False
+
+    def test_soft_delete_invalid_company_id(self):
+        """Test soft delete with invalid company ID"""
+        try:
+            response = self.session.post(f"{BASE_URL}/companies/invalid-id/soft-delete")
+            
+            if response.status_code == 404:
+                self.log_result("Soft Delete Invalid ID", True, "Correctly returned 404 for invalid company ID")
+                return True
+            else:
+                self.log_result("Soft Delete Invalid ID", False, f"Expected 404, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Soft Delete Invalid ID", False, f"Error: {str(e)}")
+            return False
+
+    def test_restore_invalid_company_id(self):
+        """Test restore with invalid company ID"""
+        try:
+            response = self.session.post(f"{BASE_URL}/companies/invalid-id/restore")
+            
+            if response.status_code == 404:
+                self.log_result("Restore Invalid ID", True, "Correctly returned 404 for invalid company ID")
+                return True
+            else:
+                self.log_result("Restore Invalid ID", False, f"Expected 404, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Restore Invalid ID", False, f"Error: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests"""
