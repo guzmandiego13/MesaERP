@@ -405,6 +405,146 @@ export default function Settings({ company }) {
     });
   };
 
+  // User edit handlers
+  const handleEditUser = (userId) => {
+    const userToEdit = users.find(user => user.id === userId);
+    if (userToEdit) {
+      setEditingUser(userId);
+      setUserForm({
+        email: userToEdit.email,
+        password: "", // Don't populate password for security
+        name: userToEdit.name,
+        role: userToEdit.role,
+        permissions: userToEdit.permissions || {
+          view_dashboard: true,
+          view_reports: false,
+          export_data: false,
+          view_finances: false,
+          manage_accounts_ledger: false,
+          create_journal_entries: false,
+          approve_journal_entries: false,
+          manage_information: false,
+          manage_companies: false,
+          manage_business_units: false,
+          view_users: false,
+          manage_users: false,
+          manage_settings: false,
+          manage_api_keys: false,
+          manage_branding: false,
+          view_inventory: false,
+          manage_inventory: false,
+          manage_procurement: false,
+          full_access: false
+        }
+      });
+    }
+  };
+
+  const handleUpdateUser = async (userId) => {
+    try {
+      const updateData = {
+        name: userForm.name,
+        email: userForm.email,
+        role: userForm.role,
+        permissions: userForm.permissions
+      };
+      
+      // Only include password if it was changed
+      if (userForm.password) {
+        updateData.password = userForm.password;
+      }
+
+      await axios.put(`${API}/users/${userId}`, updateData, { headers });
+      toast.success("User updated successfully");
+      setEditingUser(null);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update user");
+    }
+  };
+
+  const handleCancelUserEdit = () => {
+    setEditingUser(null);
+    setUserForm({
+      email: "",
+      password: "",
+      name: "",
+      role: "Analyst",
+      permissions: {
+        view_dashboard: true,
+        view_reports: false,
+        export_data: false,
+        view_finances: false,
+        manage_accounts_ledger: false,
+        create_journal_entries: false,
+        approve_journal_entries: false,
+        manage_information: false,
+        manage_companies: false,
+        manage_business_units: false,
+        view_users: false,
+        manage_users: false,
+        manage_settings: false,
+        manage_api_keys: false,
+        manage_branding: false,
+        view_inventory: false,
+        manage_inventory: false,
+        manage_procurement: false,
+        full_access: false
+      }
+    });
+  };
+
+  // Business Unit soft delete handlers
+  const handleSoftDeleteBU = async (buId) => {
+    const buToDelete = businessUnits.find(bu => bu.id === buId);
+    if (!window.confirm(`Are you sure you want to delete "${buToDelete?.name}"? This action will backup the data for 6 months and allow restoration.`)) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/business-units/${buId}/soft-delete`, {}, { headers });
+      toast.success("Business unit deleted and backed up for 6 months");
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete business unit");
+    }
+  };
+
+  const handleRestoreBU = async (buId, buName) => {
+    if (!window.confirm(`Are you sure you want to restore "${buName}"?`)) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/business-units/${buId}/restore`, {}, { headers });
+      toast.success(`Business unit "${buName}" has been restored successfully`);
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to restore business unit");
+    }
+  };
+
+  // Update BU delete handler to use soft delete
+  const handleDeleteBU = (buId) => {
+    handleSoftDeleteBU(buId);
+  };
+
+  // Update Company delete handler to use soft delete
+  const handleDeleteCompany = async (companyId) => {
+    const companyToDelete = subsidiaries.find(c => c.id === companyId);
+    if (!window.confirm(`Are you sure you want to delete "${companyToDelete?.name}"? This action will backup the data for 6 months and allow restoration.`)) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/companies/${companyId}/soft-delete`, {}, { headers });
+      toast.success("Subsidiary deleted and backed up for 6 months");
+      loadData();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete subsidiary");
+    }
+  };
+
   return (
     <div className="p-8 space-y-6" data-testid="settings-page">
       <div>
