@@ -129,9 +129,37 @@ class Location(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserPermissions(BaseModel):
+    # Dashboard & Reporting
     view_dashboard: bool = True
-    manage_information: bool = False
+    view_reports: bool = False
+    export_data: bool = False
+    
+    # Financial Management
+    view_finances: bool = False
     manage_accounts_ledger: bool = False
+    create_journal_entries: bool = False
+    approve_journal_entries: bool = False
+    
+    # Company & Business Units
+    manage_information: bool = False
+    manage_companies: bool = False
+    manage_business_units: bool = False
+    
+    # User Management
+    view_users: bool = False
+    manage_users: bool = False
+    
+    # Settings & Configuration
+    manage_settings: bool = False
+    manage_api_keys: bool = False
+    manage_branding: bool = False
+    
+    # Inventory & Operations
+    view_inventory: bool = False
+    manage_inventory: bool = False
+    manage_procurement: bool = False
+    
+    # Administrative
     full_access: bool = False
 
 class User(BaseModel):
