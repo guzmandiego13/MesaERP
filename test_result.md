@@ -137,15 +137,18 @@ backend:
 
   - task: "Business unit consolidation backend endpoints and data model"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Enhanced BusinessUnit model with parent_subsidiary_id and consolidation_enabled fields. Added consolidation API endpoints: GET /business-units/{id}/consolidation (individual BU analysis), GET /companies/{id}/consolidated-report (subsidiary rollup), POST /business-units/{id}/set-consolidation (update settings). Updated business unit CRUD to handle consolidation fields with proper validation."
+        - working: true
+          agent: "testing"
+          comment: "COMPREHENSIVE CONSOLIDATION TESTING COMPLETED: All 13 new consolidation tests passed successfully. Fixed minor bug in journal entry creation (line 888: 'lines' -> 'request.lines'). Verified: 1) Business unit creation/update with consolidation settings and parent_subsidiary_id validation, 2) GET /business-units/{id}/consolidation endpoint returns complete consolidation data with parent subsidiary info, date filtering, and financial summaries, 3) GET /companies/{id}/consolidated-report endpoint correctly aggregates all linked business units with proper totals and date filtering, 4) POST /business-units/{id}/set-consolidation endpoint updates consolidation settings with validation, 5) Enhanced GET /business-units includes parent_subsidiary_name field, 6) Full integration test with journal entries confirms consolidation rollup works correctly - business units properly link to parent subsidiaries and financial movements aggregate correctly in consolidated reports. All validation, error handling, and data integrity checks working properly."
 
 frontend:
   - task: "Inline edit/delete for subsidiaries in Settings page"
