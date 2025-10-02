@@ -85,9 +85,33 @@ class Tenant(BaseModel):
     accounting_basis: AccountingBasisEnum = AccountingBasisEnum.ACCRUAL
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class Company(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    name: str
+    parent_company_id: Optional[str] = None  # For subsidiaries
+    industry: str
+    accounting_basis: AccountingBasisEnum = AccountingBasisEnum.ACCRUAL
+    tax_id: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class BusinessUnit(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    company_id: str
+    name: str
+    code: str  # e.g., "BU-001"
+    description: Optional[str] = None
+    manager_name: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class Location(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     tenant_id: str
+    company_id: str
+    business_unit_id: Optional[str] = None
     name: str
     address: str
     timezone: str = "America/New_York"
