@@ -208,6 +208,44 @@ export default function Settings({ company }) {
     }
   };
   
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+      toast.error("Only JPG and PNG files are allowed");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File size must be less than 5MB");
+      return;
+    }
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(
+        `${API}/upload-logo/${company.id}`,
+        formData,
+        {
+          headers: {
+            ...headers,
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+
+      setBrandingForm({ ...brandingForm, logo_url: response.data.logo_url });
+      toast.success("Logo uploaded successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to upload logo");
+    }
+  };
+
   const handleUpdateBranding = async (e) => {
     e.preventDefault();
     try {
@@ -215,7 +253,7 @@ export default function Settings({ company }) {
       setBranding(response.data);
       toast.success("Branding updated successfully");
       // Reload to apply new branding
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       toast.error("Failed to update branding");
     }
