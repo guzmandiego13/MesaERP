@@ -1276,7 +1276,7 @@ class BackendTester:
             self.test_business_unit_delete_success,
             self.test_unauthorized_access,
             
-            # New soft delete tests
+            # Soft delete tests
             self.test_soft_delete_company,
             self.test_soft_delete_company_with_subsidiaries,
             self.test_get_companies_excludes_deleted,
@@ -1285,7 +1285,22 @@ class BackendTester:
             self.test_restore_non_deleted_company,
             self.test_soft_delete_already_deleted_company,
             self.test_soft_delete_invalid_company_id,
-            self.test_restore_invalid_company_id
+            self.test_restore_invalid_company_id,
+            
+            # Business unit consolidation tests
+            self.test_create_business_unit_with_consolidation,
+            self.test_create_business_unit_invalid_parent_subsidiary,
+            self.test_update_business_unit_consolidation,
+            self.test_get_business_unit_consolidation,
+            self.test_get_business_unit_consolidation_with_dates,
+            self.test_get_business_unit_consolidation_invalid_id,
+            self.test_get_consolidated_report,
+            self.test_get_consolidated_report_with_dates,
+            self.test_get_consolidated_report_invalid_id,
+            self.test_set_business_unit_consolidation,
+            self.test_set_business_unit_consolidation_invalid_parent,
+            self.test_set_business_unit_consolidation_invalid_bu_id,
+            self.test_get_business_units_includes_parent_subsidiary_name
         ]
         
         passed = 0
