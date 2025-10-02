@@ -145,6 +145,18 @@ frontend:
           agent: "main"
           comment: "Just implemented inline editing UI for business units with edit icons, form fields, and delete confirmation"
 
+  - task: "Edit/delete companies in CompanySelector with soft delete and backup"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/pages/CompanySelector.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Added comprehensive company management: inline editing, soft delete with double confirmation, 6-month backup, restoration functionality, and deleted companies view"
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
