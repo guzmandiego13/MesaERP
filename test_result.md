@@ -122,15 +122,18 @@ backend:
 
   - task: "Soft delete with backup functionality for companies"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: false
           agent: "main"
           comment: "Added comprehensive soft delete system: POST /api/companies/{id}/soft-delete (6-month backup), POST /api/companies/{id}/restore, GET /api/companies/deleted (list restorable companies). Modified Company model to include deleted_at and backup_data fields. Updated GET /api/companies to exclude soft-deleted companies."
+        - working: true
+          agent: "testing"
+          comment: "Comprehensive soft delete testing completed successfully. Fixed timezone comparison issues in restore and get_deleted_companies endpoints. All 18 backend tests passed including 9 new soft delete tests: 1) Soft delete creates backup with 6-month restoration deadline, 2) Prevents soft delete of companies with active subsidiaries, 3) GET /companies correctly excludes soft-deleted companies, 4) GET /companies/deleted lists restorable companies with restoration info, 5) Restore functionality works correctly and reactivates company, 6) Proper validation prevents restoring non-deleted companies, 7) Prevents double soft delete, 8) Handles invalid company IDs correctly (404), 9) All endpoints have proper error handling and response formats. Backup data includes business_units, locations, accounts, api_keys, branding, and journal_entries as specified."
 
 frontend:
   - task: "Inline edit/delete for subsidiaries in Settings page"
