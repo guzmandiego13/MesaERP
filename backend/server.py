@@ -1604,9 +1604,10 @@ async def get_locations(
 async def get_users(current_user: dict = Depends(get_current_user)):
     """Get all users in the tenant"""
     users = await db.users.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
-    # Remove password hashes from response
+    # Remove password hashes and MongoDB _id from response
     for user in users:
         user.pop("password_hash", None)
+        user.pop("_id", None)
     return users
 
 @api_router.post("/users")
