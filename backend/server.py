@@ -383,7 +383,7 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             # Fetch stores
-            stores_resp = await client.get(f"{PARROT_API_BASE}/stores", headers=headers)
+            stores_resp = await client.get(f"{PARROT_API_BASE}/v1/stores", headers=headers)
             stores_resp.raise_for_status()
             stores = stores_resp.json().get("data", [])
             
