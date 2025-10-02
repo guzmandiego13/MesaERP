@@ -1633,11 +1633,13 @@ async def create_user(
         role=request.role,
         permissions=request.permissions
     )
-    await db.users.insert_one(user.dict())
     
-    # Remove password hash from response
     user_dict = user.dict()
-    user_dict.pop("password_hash")
+    await db.users.insert_one(user_dict)
+    
+    # Remove password hash and _id from response
+    user_dict.pop("password_hash", None)
+    user_dict.pop("_id", None)
     return user_dict
 
 class UpdateUserRequest(BaseModel):
