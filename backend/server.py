@@ -1510,6 +1510,86 @@ async def create_company(
     company_dict.pop("_id", None)
     return company_dict
 
+class UpdateCompanyRequest(BaseModel):
+    name: Optional[str] = None
+    industry: Optional[str] = None
+    tax_id: Optional[str] = None
+    accounting_basis: Optional[AccountingBasisEnum] = None
+    is_active: Optional[bool] = None
+
+@api_router.put("/companies/{company_id}")
+async def update_company(
+    company_id: str,
+    request: UpdateCompanyRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update company details"""
+    tenant_id = current_user["tenant_id"]
+    
+    update_data = {}
+    if request.name:
+        update_data["name"] = request.name
+    if request.industry:
+        update_data["industry"] = request.industry
+    if request.tax_id is not None:
+        update_data["tax_id"] = request.tax_id
+    if request.accounting_basis:
+        update_data["accounting_basis"] = request.accounting_basis
+    if request.is_active is not None:
+        update_data["is_active"] = request.is_active
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = await db.companies.update_one(
+        {"id": company_id, "tenant_id": tenant_id},
+        {"$set": update_data}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    company = await db.companies.find_one({"id": company_id, "tenant_id": tenant_id})
+    if company:
+        company.pop("_id", None)
+    return company
+
+@api_router.delete("/companies/{company_id}")
+async def delete_company(
+    company_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a company and all associated data"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Check if company has subsidiaries
+    subsidiaries = await db.companies.count_documents({
+        "tenant_id": tenant_id,
+        "parent_company_id": company_id
+    })
+    
+    if subsidiaries > 0:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot delete company with {subsidiaries} subsidiaries. Delete subsidiaries first."
+        )
+    
+    # Delete associated data
+    await db.business_units.delete_many({"company_id": company_id})
+    await db.locations.delete_many({"company_id": company_id})
+    await db.accounts.delete_many({"company_id": company_id})
+    await db.journal_entries.delete_many({"company_id": company_id})
+    await db.api_keys.delete_many({"company_id": company_id})
+    await db.company_branding.delete_many({"company_id": company_id})
+    
+    # Delete the company
+    result = await db.companies.delete_one({"id": company_id, "tenant_id": tenant_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    return {"success": True, "message": "Company and associated data deleted"}
+
 # ============================================================================
 # BUSINESS UNIT MANAGEMENT
 # ============================================================================
