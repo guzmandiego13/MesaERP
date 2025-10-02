@@ -38,7 +38,9 @@ export default function Settings({ company }) {
     name: "",
     code: "",
     description: "",
-    manager_name: ""
+    manager_name: "",
+    parent_subsidiary_id: "",
+    consolidation_enabled: true
   });
   
   const [userForm, setUserForm] = useState({
