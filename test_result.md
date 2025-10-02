@@ -204,7 +204,8 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Soft delete with backup functionality for companies"
+    - "Business unit consolidation backend endpoints and data model"
+    - "Business unit consolidation linkage to parent subsidiaries"
     - "Edit/delete companies in CompanySelector with soft delete and backup"
     - "Inline edit/delete for subsidiaries in Settings page"
     - "Inline edit/delete for business units in Settings page"
