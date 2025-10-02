@@ -628,7 +628,7 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
                     await db.pos_sales.insert_one(sale.dict())
                     
                     # Post to journal
-                    await post_sale_to_ledger(tenant_id, location["id"], sale)
+                    await post_sale_to_ledger(tenant_id, sale.company_id, sale.business_unit_id, location["id"], sale)
                     
                     synced_count += 1
             
