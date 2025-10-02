@@ -27,6 +27,14 @@ export default function Settings({ company }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDeletedBUsDialog, setShowDeletedBUsDialog] = useState(false);
   const [deletedBusinessUnits, setDeletedBusinessUnits] = useState([]);
+
+  // CSV Import state
+  const [bankStatements, setBankStatements] = useState([]);
+  const [selectedBankStatement, setSelectedBankStatement] = useState(null);
+  const [bankTransactions, setBankTransactions] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
+  const [showCategorizationDialog, setShowCategorizationDialog] = useState(false);
   
   const [editingCompany, setEditingCompany] = useState(null);
   const [editingBU, setEditingBU] = useState(null);
