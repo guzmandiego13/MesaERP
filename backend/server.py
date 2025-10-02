@@ -1449,8 +1449,11 @@ async def get_sales_chart(
 
 @api_router.get("/companies")
 async def get_companies(current_user: dict = Depends(get_current_user)):
-    """Get all companies for the tenant"""
-    companies = await db.companies.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
+    """Get all active companies for the tenant (excludes soft-deleted)"""
+    companies = await db.companies.find({
+        "tenant_id": current_user["tenant_id"],
+        "deleted_at": None  # Exclude soft-deleted companies
+    }).to_list(1000)
     
     # Enrich with subsidiary count
     for company in companies:
