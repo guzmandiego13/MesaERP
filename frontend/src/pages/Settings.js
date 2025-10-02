@@ -458,6 +458,415 @@ export default function Settings({ company }) {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Users Tab */}
+        <TabsContent value="users">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>User Management</CardTitle>
+              <Dialog open={showUserDialog} onOpenChange={setShowUserDialog}>
+                <DialogTrigger asChild>
+                  <Button data-testid="create-user">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add User
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Create New User</DialogTitle>
+                    <DialogDescription>
+                      Add a user with specific permissions
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateUser} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Name *</Label>
+                        <Input
+                          value={userForm.name}
+                          onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label>Email *</Label>
+                        <Input
+                          type="email"
+                          value={userForm.email}
+                          onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Password *</Label>
+                      <Input
+                        type="password"
+                        value={userForm.password}
+                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Role</Label>
+                      <select
+                        value={userForm.role}
+                        onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      >
+                        <option value="Analyst">Analyst</option>
+                        <option value="Store Manager">Store Manager</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Ops">Operations</option>
+                        <option value="Owner">Owner</option>
+                      </select>
+                    </div>
+                    <div className="border-t pt-4">
+                      <h4 className="font-semibold mb-3">Permissions</h4>
+                      <div className="space-y-3">
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={userForm.permissions.view_dashboard}
+                            onChange={(e) => setUserForm({
+                              ...userForm,
+                              permissions: { ...userForm.permissions, view_dashboard: e.target.checked }
+                            })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">View Dashboard (read-only access to visuals)</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={userForm.permissions.manage_information}
+                            onChange={(e) => setUserForm({
+                              ...userForm,
+                              permissions: { ...userForm.permissions, manage_information: e.target.checked }
+                            })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">Manage Information (edit data, create records)</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={userForm.permissions.manage_accounts_ledger}
+                            onChange={(e) => setUserForm({
+                              ...userForm,
+                              permissions: { ...userForm.permissions, manage_accounts_ledger: e.target.checked }
+                            })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm">Manage Accounts & Ledger (add/delete accounts, journal entries)</span>
+                        </label>
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={userForm.permissions.full_access}
+                            onChange={(e) => setUserForm({
+                              ...userForm,
+                              permissions: { ...userForm.permissions, full_access: e.target.checked }
+                            })}
+                            className="w-4 h-4"
+                          />
+                          <span className="text-sm font-semibold">Full Access (all features and settings)</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button type="button" variant="outline" onClick={() => setShowUserDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit">Create User</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {users.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left py-3 px-4 font-semibold text-slate-700">Name</th>
+                        <th className="text-left py-3 px-4 font-semibold text-slate-700">Email</th>
+                        <th className="text-left py-3 px-4 font-semibold text-slate-700">Role</th>
+                        <th className="text-left py-3 px-4 font-semibold text-slate-700">Permissions</th>
+                        <th className="text-left py-3 px-4 font-semibold text-slate-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((user) => (
+                        <tr key={user.id} className="border-b border-slate-100">
+                          <td className="py-3 px-4 font-medium">{user.name}</td>
+                          <td className="py-3 px-4 text-sm">{user.email}</td>
+                          <td className="py-3 px-4 text-sm">{user.role}</td>
+                          <td className="py-3 px-4 text-xs">
+                            {user.permissions?.full_access && (
+                              <span className="px-2 py-1 bg-green-100 text-green-700 rounded mr-1">Full</span>
+                            )}
+                            {user.permissions?.manage_accounts_ledger && (
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded mr-1">Accounts</span>
+                            )}
+                            {user.permissions?.manage_information && (
+                              <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded mr-1">Manage</span>
+                            )}
+                            {user.permissions?.view_dashboard && !user.permissions?.manage_information && (
+                              <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded">View Only</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => handleDeleteUser(user.id)}
+                            >
+                              Delete
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-slate-500">No users yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* APIs Tab */}
+        <TabsContent value="apis">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>API Keys & Extensions</CardTitle>
+              <Dialog open={showAPIDialog} onOpenChange={setShowAPIDialog}>
+                <DialogTrigger asChild>
+                  <Button data-testid="add-api-key">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add API Key
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Add API Key</DialogTitle>
+                    <DialogDescription>
+                      Connect external services to {company.name}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateAPIKey} className="space-y-4">
+                    <div>
+                      <Label>Service Name *</Label>
+                      <Input
+                        value={apiForm.name}
+                        onChange={(e) => setAPIForm({ ...apiForm, name: e.target.value })}
+                        placeholder="Parrot POS - Main Store"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>Service Type *</Label>
+                      <select
+                        value={apiForm.service_type}
+                        onChange={(e) => setAPIForm({ ...apiForm, service_type: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      >
+                        <option value="parrot_pos">Parrot POS</option>
+                        <option value="stripe">Stripe Payments</option>
+                        <option value="plaid">Plaid Banking</option>
+                        <option value="square">Square POS</option>
+                        <option value="shopify">Shopify</option>
+                        <option value="quickbooks">QuickBooks</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label>API Key *</Label>
+                      <Input
+                        type="password"
+                        value={apiForm.api_key}
+                        onChange={(e) => setAPIForm({ ...apiForm, api_key: e.target.value })}
+                        placeholder="pk_xxxxxxxxxxxxx"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label>API Secret (Optional)</Label>
+                      <Input
+                        type="password"
+                        value={apiForm.api_secret}
+                        onChange={(e) => setAPIForm({ ...apiForm, api_secret: e.target.value })}
+                        placeholder="sk_xxxxxxxxxxxxx"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setShowAPIDialog(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit">Add API Key</Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </CardHeader>
+            <CardContent>
+              {apiKeys.length > 0 ? (
+                <div className="space-y-3">
+                  {apiKeys.map((key) => (
+                    <div
+                      key={key.id}
+                      className="flex items-center justify-between p-4 border border-slate-200 rounded-lg"
+                    >
+                      <div>
+                        <h4 className="font-semibold text-slate-900">{key.name}</h4>
+                        <p className="text-sm text-slate-600 capitalize">{key.service_type.replace('_', ' ')}</p>
+                        <p className="text-xs font-mono text-slate-500 mt-1">{key.api_key_masked}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 text-xs font-medium rounded ${
+                          key.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {key.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-600"
+                          onClick={() => handleDeleteAPIKey(key.id)}
+                        >
+                          <Trash className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <p className="text-slate-500">No API keys configured</p>
+                  <p className="text-sm text-slate-400 mt-2">Add API keys to connect external services</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Branding Tab */}
+        <TabsContent value="branding">
+          <Card>
+            <CardHeader>
+              <CardTitle>Company Branding</CardTitle>
+              <p className="text-sm text-slate-600">Customize the look and feel for {company.name}</p>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleUpdateBranding} className="space-y-6">
+                <div>
+                  <Label>Company Logo URL</Label>
+                  <Input
+                    value={brandingForm.logo_url}
+                    onChange={(e) => setBrandingForm({ ...brandingForm, logo_url: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Enter a URL to your company logo (will appear in top left corner)
+                  </p>
+                  {brandingForm.logo_url && (
+                    <div className="mt-3 p-3 bg-slate-50 rounded">
+                      <p className="text-xs text-slate-600 mb-2">Preview:</p>
+                      <img 
+                        src={brandingForm.logo_url} 
+                        alt="Logo preview" 
+                        className="h-12 object-contain"
+                        onError={(e) => e.target.style.display = 'none'}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>Primary Color</Label>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="color"
+                        value={brandingForm.primary_color}
+                        onChange={(e) => setBrandingForm({ ...brandingForm, primary_color: e.target.value })}
+                        className="w-16 h-10"
+                      />
+                      <Input
+                        value={brandingForm.primary_color}
+                        onChange={(e) => setBrandingForm({ ...brandingForm, primary_color: e.target.value })}
+                        placeholder="#3b82f6"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Secondary Color</Label>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="color"
+                        value={brandingForm.secondary_color}
+                        onChange={(e) => setBrandingForm({ ...brandingForm, secondary_color: e.target.value })}
+                        className="w-16 h-10"
+                      />
+                      <Input
+                        value={brandingForm.secondary_color}
+                        onChange={(e) => setBrandingForm({ ...brandingForm, secondary_color: e.target.value })}
+                        placeholder="#8b5cf6"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Accent Color</Label>
+                    <div className="flex gap-2 items-center">
+                      <Input
+                        type="color"
+                        value={brandingForm.accent_color}
+                        onChange={(e) => setBrandingForm({ ...brandingForm, accent_color: e.target.value })}
+                        className="w-16 h-10"
+                      />
+                      <Input
+                        value={brandingForm.accent_color}
+                        onChange={(e) => setBrandingForm({ ...brandingForm, accent_color: e.target.value })}
+                        placeholder="#10b981"
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-lg">
+                  <h4 className="font-semibold mb-3">Color Preview</h4>
+                  <div className="flex gap-3">
+                    <div 
+                      className="w-20 h-20 rounded"
+                      style={{ backgroundColor: brandingForm.primary_color }}
+                    />
+                    <div 
+                      className="w-20 h-20 rounded"
+                      style={{ backgroundColor: brandingForm.secondary_color }}
+                    />
+                    <div 
+                      className="w-20 h-20 rounded"
+                      style={{ backgroundColor: brandingForm.accent_color }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Button type="submit">Save Branding</Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
