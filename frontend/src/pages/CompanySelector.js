@@ -37,10 +37,18 @@ export default function CompanySelector({ onCompanySelect }) {
 
   const loadCompanies = async () => {
     try {
-      const response = await axios.get(`${API}/companies`, { headers });
+      const [companiesRes, deletedRes] = await Promise.all([
+        axios.get(`${API}/companies`, { headers }),
+        axios.get(`${API}/companies/deleted`, { headers }).catch(() => ({ data: [] }))
+      ]);
+      
       // Filter to show only parent companies (no parent_company_id)
-      const parentCompanies = response.data.filter(c => !c.parent_company_id);
+      const parentCompanies = companiesRes.data.filter(c => !c.parent_company_id);
       setCompanies(parentCompanies);
+      
+      // Filter deleted companies to only parent companies
+      const deletedParentCompanies = deletedRes.data.filter(c => !c.parent_company_id);
+      setDeletedCompanies(deletedParentCompanies);
     } catch (error) {
       toast.error("Failed to load companies");
     } finally {
