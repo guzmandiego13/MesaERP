@@ -654,6 +654,44 @@ export default function Settings({ company }) {
                         placeholder="John Doe"
                       />
                     </div>
+                    
+                    {/* Consolidation Settings */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="font-semibold text-slate-900 mb-3">Consolidation Settings</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label>Parent Subsidiary</Label>
+                          <select
+                            value={buForm.parent_subsidiary_id}
+                            onChange={(e) => setBUForm({ ...buForm, parent_subsidiary_id: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                          >
+                            <option value="">Select parent subsidiary...</option>
+                            {subsidiaries.map((sub) => (
+                              <option key={sub.id} value={sub.id}>{sub.name}</option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-slate-500 mt-1">
+                            Business unit transactions will consolidate to this subsidiary
+                          </p>
+                        </div>
+                        <div>
+                          <label className="flex items-center gap-2 pt-6">
+                            <input
+                              type="checkbox"
+                              checked={buForm.consolidation_enabled}
+                              onChange={(e) => setBUForm({ ...buForm, consolidation_enabled: e.target.checked })}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm font-medium">Enable Consolidation</span>
+                          </label>
+                          <p className="text-xs text-slate-500 mt-1 ml-6">
+                            Include this BU in consolidated reports
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
                     <div className="flex justify-end gap-2">
                       <Button type="button" variant="outline" onClick={() => setShowBUDialog(false)}>
                         Cancel
