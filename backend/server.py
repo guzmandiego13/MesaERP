@@ -885,8 +885,8 @@ async def create_journal_entry(
     tenant_id = current_user["tenant_id"]
     
     # Validate lines balance (debits = credits)
-    total_debits = sum(line.get("debit", 0) for line in lines)
-    total_credits = sum(line.get("credit", 0) for line in lines)
+    total_debits = sum(line.get("debit", 0) for line in request.lines)
+    total_credits = sum(line.get("credit", 0) for line in request.lines)
     
     if abs(total_debits - total_credits) > 0.01:
         raise HTTPException(
