@@ -570,11 +570,6 @@ export default function Settings({ company }) {
     }
   };
 
-  // Update BU delete handler to use soft delete
-  const handleDeleteBU = (buId) => {
-    handleSoftDeleteBU(buId);
-  };
-
   // Update Company delete handler to use soft delete
   const handleDeleteCompany = async (companyId) => {
     const companyToDelete = subsidiaries.find(c => c.id === companyId);
