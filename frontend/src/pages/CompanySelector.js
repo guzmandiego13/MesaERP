@@ -169,47 +169,139 @@ export default function CompanySelector({ onCompanySelect }) {
             {companies.map((company) => (
               <Card
                 key={company.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-400"
-                onClick={() => onCompanySelect(company)}
+                className="hover:shadow-lg transition-shadow border-2 hover:border-blue-400"
                 data-testid={`select-company-${company.id}`}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
+                {editingCompany === company.id ? (
+                  // Edit Mode
+                  <form onSubmit={handleUpdateCompany} className="p-6">
+                    <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                         <Building2 className="w-6 h-6 text-blue-600" />
                       </div>
+                      <h3 className="text-lg font-semibold">Editing Company</h3>
+                    </div>
+                    
+                    <div className="space-y-4">
                       <div>
-                        <CardTitle className="text-xl">{company.name}</CardTitle>
-                        <CardDescription className="capitalize mt-1">
-                          {company.industry}
-                        </CardDescription>
+                        <Label>Company Name</Label>
+                        <Input
+                          value={companyForm.name}
+                          onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                          className="mt-1"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label>Industry</Label>
+                        <select
+                          value={companyForm.industry}
+                          onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1"
+                        >
+                          <option value="restaurant">Restaurant</option>
+                          <option value="retail">Retail</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Tax ID</Label>
+                        <Input
+                          value={companyForm.tax_id}
+                          onChange={(e) => setCompanyForm({ ...companyForm, tax_id: e.target.value })}
+                          className="mt-1"
+                          placeholder="XX-XXXXXXX"
+                        />
+                      </div>
+                      <div>
+                        <Label>Accounting Basis</Label>
+                        <select
+                          value={companyForm.accounting_basis}
+                          onChange={(e) => setCompanyForm({ ...companyForm, accounting_basis: e.target.value })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md mt-1"
+                        >
+                          <option value="Accrual">Accrual</option>
+                          <option value="Cash">Cash</option>
+                        </select>
+                      </div>
+                      
+                      <div className="flex gap-2 pt-4">
+                        <Button type="submit" className="flex-1">
+                          Save Changes
+                        </Button>
+                        <Button type="button" variant="outline" onClick={cancelEdit} className="flex-1">
+                          Cancel
+                        </Button>
                       </div>
                     </div>
-                    <ArrowRight className="w-5 h-5 text-slate-400" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    {company.tax_id && (
-                      <div className="flex justify-between">
-                        <span className="text-slate-600">Tax ID:</span>
-                        <span className="font-medium text-slate-900">{company.tax_id}</span>
+                  </form>
+                ) : (
+                  // View Mode
+                  <>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3" onClick={() => onCompanySelect(company)} className="cursor-pointer flex-1">
+                          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <Building2 className="w-6 h-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl">{company.name}</CardTitle>
+                            <CardDescription className="capitalize mt-1">
+                              {company.industry}
+                            </CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditCompany(company);
+                            }}
+                            className="p-2 h-8 w-8"
+                            title="Edit company"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(company);
+                            }}
+                            className="p-2 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete company"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </Button>
+                          <ArrowRight className="w-5 h-5 text-slate-400" />
+                        </div>
                       </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Accounting:</span>
-                      <span className="font-medium text-slate-900">{company.accounting_basis}</span>
-                    </div>
-                    <div className="flex justify-between items-center pt-2 border-t">
-                      <span className="text-slate-600 flex items-center gap-1">
-                        <Users className="w-4 h-4" />
-                        Subsidiaries:
-                      </span>
-                      <span className="font-semibold text-blue-600">{company.subsidiary_count || 0}</span>
-                    </div>
-                  </div>
-                </CardContent>
+                    </CardHeader>
+                    <CardContent onClick={() => onCompanySelect(company)} className="cursor-pointer">
+                      <div className="space-y-2 text-sm">
+                        {company.tax_id && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-600">Tax ID:</span>
+                            <span className="font-medium text-slate-900">{company.tax_id}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Accounting:</span>
+                          <span className="font-medium text-slate-900">{company.accounting_basis}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t">
+                          <span className="text-slate-600 flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            Subsidiaries:
+                          </span>
+                          <span className="font-semibold text-blue-600">{company.subsidiary_count || 0}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </>
+                )}
               </Card>
             ))}
           </div>
