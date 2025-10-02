@@ -726,6 +726,7 @@ async def get_accounts(
     return accounts
 
 class CreateAccountRequest(BaseModel):
+    company_id: str
     code: str
     name: str
     account_type: AccountTypeEnum
@@ -738,22 +739,23 @@ async def create_account(
 ):
     """Create a new account"""
     tenant_id = current_user["tenant_id"]
-    code = request.code
-    name = request.name
-    account_type = request.account_type
-    parent_id = request.parent_id
     
-    # Check if code already exists
-    existing = await db.accounts.find_one({"tenant_id": tenant_id, "code": code})
+    # Check if code already exists in this company
+    existing = await db.accounts.find_one({
+        "tenant_id": tenant_id,
+        "company_id": request.company_id,
+        "code": request.code
+    })
     if existing:
-        raise HTTPException(status_code=400, detail="Account code already exists")
+        raise HTTPException(status_code=400, detail="Account code already exists in this company")
     
     account = Account(
         tenant_id=tenant_id,
-        code=code,
-        name=name,
-        account_type=account_type,
-        parent_id=parent_id
+        company_id=request.company_id,
+        code=request.code,
+        name=request.name,
+        account_type=request.account_type,
+        parent_id=request.parent_id
     )
     await db.accounts.insert_one(account.dict())
     return account
