@@ -2548,7 +2548,22 @@ INV-TEST-003,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Non Existent Account,Test
             self.test_set_business_unit_consolidation,
             self.test_set_business_unit_consolidation_invalid_parent,
             self.test_set_business_unit_consolidation_invalid_bu_id,
-            self.test_get_business_units_includes_parent_subsidiary_name
+            self.test_get_business_units_includes_parent_subsidiary_name,
+            
+            # CSV Import System tests
+            self.test_download_accounts_template,
+            self.test_upload_accounts_template,
+            self.test_upload_accounts_template_duplicate_validation,
+            self.test_upload_accounts_template_invalid_csv,
+            self.test_download_cashflows_template,
+            self.test_upload_cashflows_template,
+            self.test_upload_cashflows_template_missing_account,
+            self.test_upload_bank_statement,
+            self.test_get_bank_statements,
+            self.test_get_bank_transactions,
+            self.test_categorize_bank_transactions,
+            self.test_create_journal_entries_from_bank_transactions,
+            self.test_unauthorized_csv_access
         ]
         
         passed = 0
