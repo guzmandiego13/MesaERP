@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Plus, Building2, Briefcase, Upload, Trash, Edit, Save, X, RotateCcw } from "lucide-react";
+import { Plus, Building2, Briefcase, Upload, Trash, Edit, Save, X, RotateCcw, FileText, Download, Upload as UploadIcon } from "lucide-react";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
