@@ -243,6 +243,21 @@ class CreateTenantRequest(BaseModel):
     admin_email: EmailStr
     admin_password: str
     admin_name: str
+    company_name: Optional[str] = None  # First company name
+
+class CreateCompanyRequest(BaseModel):
+    name: str
+    industry: str
+    parent_company_id: Optional[str] = None
+    tax_id: Optional[str] = None
+    accounting_basis: AccountingBasisEnum = AccountingBasisEnum.ACCRUAL
+
+class CreateBusinessUnitRequest(BaseModel):
+    company_id: str
+    name: str
+    code: str
+    description: Optional[str] = None
+    manager_name: Optional[str] = None
 
 class BankTransactionImport(BaseModel):
     date: str
