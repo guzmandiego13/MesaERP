@@ -660,26 +660,119 @@ export default function Settings({ company }) {
               {businessUnits.length > 0 ? (
                 <div className="space-y-3">
                   {businessUnits.map((bu) => (
-                    <div
-                      key={bu.id}
-                      className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Briefcase className="w-6 h-6 text-indigo-600" />
-                        <div>
-                          <h4 className="font-semibold text-slate-900">{bu.name}</h4>
-                          <p className="text-sm text-slate-600">
-                            {bu.company_name} • Code: {bu.code}
-                          </p>
-                          {bu.description && (
-                            <p className="text-xs text-slate-500 mt-1">{bu.description}</p>
-                          )}
+                    <div key={bu.id} className="p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
+                      {editingBU === bu.id ? (
+                        // Edit mode
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-3 mb-4">
+                            <Briefcase className="w-6 h-6 text-indigo-600" />
+                            <h4 className="font-semibold text-slate-900">Editing Business Unit</h4>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                              <input
+                                type="text"
+                                value={buForm.name}
+                                onChange={(e) => setBUForm({ ...buForm, name: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Code</label>
+                              <input
+                                type="text"
+                                value={buForm.code}
+                                onChange={(e) => setBUForm({ ...buForm, code: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="BU-SALES"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                              <input
+                                type="text"
+                                value={buForm.description}
+                                onChange={(e) => setBUForm({ ...buForm, description: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Handles all sales operations"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-slate-700 mb-1">Manager Name</label>
+                              <input
+                                type="text"
+                                value={buForm.manager_name}
+                                onChange={(e) => setBUForm({ ...buForm, manager_name: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="John Doe"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-end gap-2 pt-2">
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={handleCancelBUEdit}
+                              className="flex items-center gap-2"
+                            >
+                              <X className="w-4 h-4" />
+                              Cancel
+                            </Button>
+                            <Button 
+                              onClick={() => handleUpdateBU(bu.id)}
+                              className="flex items-center gap-2"
+                            >
+                              <Save className="w-4 h-4" />
+                              Save
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      {bu.manager_name && (
-                        <div className="text-right">
-                          <p className="text-xs font-medium text-slate-600">Manager</p>
-                          <p className="text-sm text-slate-900">{bu.manager_name}</p>
+                      ) : (
+                        // View mode
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Briefcase className="w-6 h-6 text-indigo-600" />
+                            <div>
+                              <h4 className="font-semibold text-slate-900">{bu.name}</h4>
+                              <p className="text-sm text-slate-600">
+                                {bu.company_name} • Code: {bu.code}
+                              </p>
+                              {bu.description && (
+                                <p className="text-xs text-slate-500 mt-1">{bu.description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {bu.manager_name && (
+                              <div className="text-right">
+                                <p className="text-xs font-medium text-slate-600">Manager</p>
+                                <p className="text-sm text-slate-900">{bu.manager_name}</p>
+                              </div>
+                            )}
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleEditBU(bu.id)}
+                                className="p-2 h-8 w-8"
+                                title="Edit business unit"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteBU(bu.id)}
+                                className="p-2 h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Delete business unit"
+                              >
+                                <Trash className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
