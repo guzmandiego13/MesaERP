@@ -149,22 +149,12 @@ export default function Settings({ company }) {
                         <option value="retail">Retail</option>
                       </select>
                     </div>
-                    <div>
-                      <Label>Parent Company (Optional)</Label>
-                      <select
-                        value={companyForm.parent_company_id}
-                        onChange={(e) => setCompanyForm({ ...companyForm, parent_company_id: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                      >
-                        <option value="">None (Standalone Company)</option>
-                        {parentCompanies.map((company) => (
-                          <option key={company.id} value={company.id}>
-                            {company.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Select to create as a subsidiary
+                    <div className="p-3 bg-blue-50 rounded-md">
+                      <p className="text-sm text-blue-900">
+                        <strong>Parent Company:</strong> {company.name}
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        This subsidiary will be created under the current parent company
                       </p>
                     </div>
                     <div>
