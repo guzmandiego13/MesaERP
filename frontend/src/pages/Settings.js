@@ -829,7 +829,19 @@ export default function Settings({ company }) {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Business Units</CardTitle>
-              <Dialog open={showBUDialog} onOpenChange={setShowBUDialog}>
+              <div className="flex gap-2">
+                {deletedBusinessUnits.length > 0 && (
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowDeletedBUsDialog(true)}
+                    className="text-orange-600 hover:text-orange-700"
+                    size="sm"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-1" />
+                    Deleted ({deletedBusinessUnits.length})
+                  </Button>
+                )}
+                <Dialog open={showBUDialog} onOpenChange={setShowBUDialog}>
                 <DialogTrigger asChild>
                   <Button data-testid="create-business-unit">
                     <Plus className="w-4 h-4 mr-2" />
