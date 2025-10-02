@@ -11,8 +11,8 @@ from datetime import datetime
 
 # Configuration
 BASE_URL = "https://erp-dashboard-31.preview.emergentagent.com/api"
-TEST_EMAIL = "admin@mesaerp.com"
-TEST_PASSWORD = "admin123"
+TEST_EMAIL = "test@example.com"
+TEST_PASSWORD = "password123"
 
 class BackendTester:
     def __init__(self):
