@@ -385,88 +385,112 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
             # Fetch stores
             stores_resp = await client.get(f"{PARROT_API_BASE}/v1/stores", headers=headers)
             stores_resp.raise_for_status()
-            stores = stores_resp.json().get("data", [])
+            stores_data = stores_resp.json()
+            stores = stores_data.get("data", [])
             
             synced_count = 0
             
-            # For each store, fetch orders from last 7 days
-            end_time = int(datetime.now(timezone.utc).timestamp() * 1000)
-            start_time = int((datetime.now(timezone.utc) - timedelta(days=7)).timestamp() * 1000)
+            # Calculate time range (last 7 days, but API requires max 48h chunks)
+            end_dt = datetime.now(timezone.utc)
+            start_dt = end_dt - timedelta(days=2)  # 48 hours max
+            
+            # Format timestamps as ISO strings
+            start_timestamp = start_dt.isoformat()
+            end_timestamp = end_dt.isoformat()
             
             for store in stores[:3]:  # Limit to first 3 stores for MVP
-                store_id = store.get("_id")
+                store_uuid = store.get("uuid")
+                store_name = store.get("name", "Unknown Store")
                 
                 # Get or create location
                 location = await db.locations.find_one({
                     "tenant_id": tenant_id,
-                    "name": store.get("name", "Unknown Store")
+                    "name": store_name
                 })
                 
                 if not location:
                     location = Location(
                         tenant_id=tenant_id,
-                        name=store.get("name", "Unknown Store"),
-                        address=store.get("address", "")
+                        name=store_name,
+                        address=""
                     )
                     await db.locations.insert_one(location.dict())
                     location = location.dict()
                 
                 # Fetch orders
                 orders_resp = await client.get(
-                    f"{PARROT_API_BASE}/orders",
+                    f"{PARROT_API_BASE}/v1/orders",
                     headers=headers,
                     params={
-                        "storeId": store_id,
-                        "startTimestamp": start_time,
-                        "endTimestamp": end_time,
-                        "page": 0,
-                        "size": 100
+                        "storeUUID": [store_uuid],
+                        "startTimestamp": start_timestamp,
+                        "endTimestamp": end_timestamp,
+                        "page": "0",
+                        "pageSize": 100
                     }
                 )
                 orders_resp.raise_for_status()
-                orders = orders_resp.json().get("data", [])
+                orders_data = orders_resp.json()
+                orders = orders_data.get("data", [])
                 
                 for order in orders:
-                    order_id = order.get("_id")
+                    order_uuid = order.get("uuid")
                     
                     # Check if already synced
                     existing = await db.pos_sales.find_one({
                         "tenant_id": tenant_id,
-                        "parrot_order_id": order_id
+                        "parrot_order_id": order_uuid
                     })
                     
                     if existing:
                         continue
                     
-                    # Fetch order items
+                    # Fetch order items using v2 endpoint
                     items_resp = await client.get(
-                        f"{PARROT_API_BASE}/orders/{order_id}/items/v2",
-                        headers=headers
+                        f"{PARROT_API_BASE}/v2/order-items",
+                        headers=headers,
+                        params={
+                            "storeUUID": [store_uuid],
+                            "startTimestamp": start_timestamp,
+                            "endTimestamp": end_timestamp,
+                            "page": "0",
+                            "pageSize": 100
+                        }
                     )
                     items_resp.raise_for_status()
-                    order_items = items_resp.json().get("data", [])
+                    items_data = items_resp.json()
+                    all_items = items_data.get("data", [])
+                    
+                    # Filter items for this specific order
+                    order_items = [item for item in all_items if item.get("orderUuid") == order_uuid]
                     
                     line_items = []
                     for item in order_items:
-                        product = item.get("product", {})
                         line_items.append({
-                            "sku": product.get("sku", ""),
-                            "name": product.get("name", ""),
+                            "sku": item.get("sku", ""),
+                            "name": item.get("itemName", ""),
                             "quantity": item.get("quantity", 0),
-                            "unit_price": item.get("unitPrice", 0),
-                            "total": item.get("total", 0)
+                            "unit_price": float(item.get("unitPrice", 0)),
+                            "total": float(item.get("total", 0))
                         })
+                    
+                    # Parse timestamps
+                    created_at = order.get("createdAt", "")
+                    try:
+                        sale_date = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    except:
+                        sale_date = datetime.now(timezone.utc)
                     
                     # Create POS sale
                     sale = POSSale(
                         tenant_id=tenant_id,
                         location_id=location["id"],
-                        parrot_order_id=order_id,
-                        order_number=order.get("orderNumber", ""),
-                        sale_date=datetime.fromtimestamp(order.get("createdAt", 0) / 1000, tz=timezone.utc),
-                        total_amount=order.get("total", 0),
-                        tax_amount=order.get("tax", 0),
-                        discount_amount=order.get("discount", 0),
+                        parrot_order_id=order_uuid,
+                        order_number=order.get("orderReference", ""),
+                        sale_date=sale_date,
+                        total_amount=float(order.get("total", 0)),
+                        tax_amount=float(order.get("totalTaxes", 0)),
+                        discount_amount=float(order.get("totalDiscounts", 0)),
                         line_items=line_items
                     )
                     await db.pos_sales.insert_one(sale.dict())
