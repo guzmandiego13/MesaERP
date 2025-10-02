@@ -199,6 +199,30 @@ frontend:
           agent: "main"
           comment: "Enhanced business units with parent subsidiary consolidation settings: added parent_subsidiary_id field, consolidation_enabled toggle, visual indicators for consolidation status, and dropdown selection in create/edit forms"
 
+  - task: "Soft delete for business units with 6-month backup"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Added comprehensive soft delete system for business units: POST /business-units/{id}/soft-delete, POST /business-units/{id}/restore, GET /business-units/deleted. Enhanced BusinessUnit model with deleted_at and backup_data fields. Updated GET /business-units to exclude soft-deleted items."
+
+  - task: "Enhanced user management with edit functionality and granular permissions"
+    implemented: true
+    working: false
+    file: "/app/frontend/src/pages/Settings.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Enhanced user management system: added user edit functionality, comprehensive permission system with 17 granular permissions across 6 categories (Dashboard, Financial, Company, User Management, Settings, Inventory), improved user table with edit/delete buttons, enhanced permission display with colored badges, user edit dialog with full form functionality."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
