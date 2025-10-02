@@ -2160,9 +2160,8 @@ INV-TEST-001,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Test Office Supplies,Test
 INV-TEST-002,2024-01-16T00:00:00Z,2024-01-20T00:00:00Z,Test Equipment,Dell Computer,Computer purchase for testing,check,2500.00,capitalize_bs"""
             
             files = {'file': ('test_cashflows.csv', csv_content, 'text/csv')}
-            data = {'company_id': self.test_company_id}
             
-            response = self.session.post(f"{BASE_URL}/cashflows/upload-template", files=files, data=data)
+            response = self.session.post(f"{BASE_URL}/cashflows/upload-template?company_id={self.test_company_id}", files=files)
             
             if response.status_code == 200:
                 data = response.json()
