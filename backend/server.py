@@ -119,6 +119,12 @@ class Location(BaseModel):
     lng: Optional[float] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class UserPermissions(BaseModel):
+    view_dashboard: bool = True
+    manage_information: bool = False
+    manage_accounts_ledger: bool = False
+    full_access: bool = False
+
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     tenant_id: str
@@ -126,8 +132,30 @@ class User(BaseModel):
     password_hash: str
     name: str
     role: RoleEnum
+    permissions: Optional[UserPermissions] = None
     location_ids: List[str] = []  # Empty means access to all locations
+    is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class CompanyBranding(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
+    logo_url: Optional[str] = None
+    primary_color: str = "#3b82f6"  # Default blue
+    secondary_color: str = "#8b5cf6"  # Default purple
+    accent_color: str = "#10b981"  # Default green
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class APIKey(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    company_id: str
+    name: str
+    service_type: str  # "parrot_pos", "stripe", "plaid", etc.
+    api_key: str
+    api_secret: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_used: Optional[datetime] = None
 
 class Account(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
