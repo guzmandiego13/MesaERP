@@ -78,19 +78,20 @@ class ConsolidationIntegrationTester:
             
             # 3. Create business units with consolidation settings
             print("2. Creating business units with consolidation...")
+            timestamp = str(int(datetime.now().timestamp()))
             bu_data_list = [
                 {
                     "company_id": main_company_id,
-                    "name": "Operations BU",
-                    "code": "BU-OPS-CONSOL",
+                    "name": f"Operations BU {timestamp}",
+                    "code": f"BU-OPS-{timestamp}",
                     "description": "Operations business unit for consolidation",
                     "parent_subsidiary_id": parent_subsidiary_id,
                     "consolidation_enabled": True
                 },
                 {
                     "company_id": main_company_id,
-                    "name": "Sales BU",
-                    "code": "BU-SALES-CONSOL",
+                    "name": f"Sales BU {timestamp}",
+                    "code": f"BU-SALES-{timestamp}",
                     "description": "Sales business unit for consolidation",
                     "parent_subsidiary_id": parent_subsidiary_id,
                     "consolidation_enabled": True
