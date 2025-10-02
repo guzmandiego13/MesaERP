@@ -371,6 +371,28 @@ async def login(request: LoginRequest):
 # PARROT POS INTEGRATION
 # ============================================================================
 
+async def make_parrot_request(client, url, headers, params, retries=3):
+    """Make Parrot API request with rate limit handling"""
+    for attempt in range(retries):
+        try:
+            response = await client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                # Rate limited - wait and retry with exponential backoff
+                wait_time = (2 ** attempt) * 5  # 5s, 10s, 20s
+                logger.warning(f"Rate limited. Waiting {wait_time}s before retry {attempt + 1}/{retries}")
+                await asyncio.sleep(wait_time)
+                if attempt == retries - 1:
+                    raise HTTPException(
+                        status_code=429, 
+                        detail=f"Parrot API rate limit exceeded. Please wait a minute and try again."
+                    )
+            else:
+                raise
+    return None
+
 @api_router.post("/pos/sync")
 async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
     """Sync data from Parrot POS API"""
@@ -382,22 +404,51 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
     headers = {"Authorization": f"Bearer {PARROT_API_KEY}"}
     
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # Fetch stores
-            stores_resp = await client.get(f"{PARROT_API_BASE}/v1/stores", headers=headers)
-            stores_resp.raise_for_status()
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Fetch stores with rate limit handling
+            stores_resp = await make_parrot_request(
+                client,
+                f"{PARROT_API_BASE}/v1/stores",
+                headers,
+                {}
+            )
             stores_data = stores_resp.json()
             stores = stores_data.get("data", [])
             
             synced_count = 0
             
-            # Calculate time range (last 7 days, but API requires max 48h chunks)
+            # Calculate time range (last 48 hours max due to API constraint)
             end_dt = datetime.now(timezone.utc)
-            start_dt = end_dt - timedelta(days=2)  # 48 hours max
+            start_dt = end_dt - timedelta(hours=47)  # Stay under 48h limit
             
             # Format timestamps as ISO strings
             start_timestamp = start_dt.isoformat()
             end_timestamp = end_dt.isoformat()
+            
+            # Add delay between API calls to avoid rate limits (15 req/min = 1 per 4s)
+            await asyncio.sleep(4)
+            
+            # Fetch order items once for all stores (more efficient)
+            all_items = []
+            store_uuids = [store.get("uuid") for store in stores[:3]]
+            
+            if store_uuids:
+                items_resp = await make_parrot_request(
+                    client,
+                    f"{PARROT_API_BASE}/v2/order-items",
+                    headers,
+                    {
+                        "storeUUID": store_uuids,
+                        "startTimestamp": start_timestamp,
+                        "endTimestamp": end_timestamp,
+                        "page": "0",
+                        "pageSize": 100
+                    }
+                )
+                items_data = items_resp.json()
+                all_items = items_data.get("data", [])
+                
+                await asyncio.sleep(4)  # Rate limit delay
             
             for store in stores[:3]:  # Limit to first 3 stores for MVP
                 store_uuid = store.get("uuid")
@@ -418,11 +469,12 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
                     await db.locations.insert_one(location.dict())
                     location = location.dict()
                 
-                # Fetch orders
-                orders_resp = await client.get(
+                # Fetch orders for this store
+                orders_resp = await make_parrot_request(
+                    client,
                     f"{PARROT_API_BASE}/v1/orders",
-                    headers=headers,
-                    params={
+                    headers,
+                    {
                         "storeUUID": [store_uuid],
                         "startTimestamp": start_timestamp,
                         "endTimestamp": end_timestamp,
@@ -430,9 +482,10 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
                         "pageSize": 100
                     }
                 )
-                orders_resp.raise_for_status()
                 orders_data = orders_resp.json()
                 orders = orders_data.get("data", [])
+                
+                await asyncio.sleep(4)  # Rate limit delay
                 
                 for order in orders:
                     order_uuid = order.get("uuid")
@@ -446,23 +499,7 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
                     if existing:
                         continue
                     
-                    # Fetch order items using v2 endpoint
-                    items_resp = await client.get(
-                        f"{PARROT_API_BASE}/v2/order-items",
-                        headers=headers,
-                        params={
-                            "storeUUID": [store_uuid],
-                            "startTimestamp": start_timestamp,
-                            "endTimestamp": end_timestamp,
-                            "page": "0",
-                            "pageSize": 100
-                        }
-                    )
-                    items_resp.raise_for_status()
-                    items_data = items_resp.json()
-                    all_items = items_data.get("data", [])
-                    
-                    # Filter items for this specific order
+                    # Filter items for this specific order from pre-fetched data
                     order_items = [item for item in all_items if item.get("orderUuid") == order_uuid]
                     
                     line_items = []
@@ -503,8 +540,15 @@ async def sync_parrot_pos(current_user: dict = Depends(get_current_user)):
             
             return {"success": True, "synced_orders": synced_count}
     
+    except HTTPException:
+        raise
     except httpx.HTTPStatusError as e:
         logger.error(f"Parrot API error: {e.response.status_code} - {e.response.text}")
+        if e.response.status_code == 429:
+            raise HTTPException(
+                status_code=429, 
+                detail="Parrot API rate limit exceeded. Please wait a minute and try again."
+            )
         raise HTTPException(status_code=500, detail=f"Parrot API error: {e.response.status_code}")
     except Exception as e:
         logger.error(f"Sync error: {str(e)}")
