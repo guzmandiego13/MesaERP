@@ -2053,6 +2053,113 @@ export default function Settings({ company }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Bank Transaction Categorization Dialog */}
+      <Dialog open={showCategorizationDialog} onOpenChange={setShowCategorizationDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Categorize Bank Transactions</DialogTitle>
+            <DialogDescription>
+              Assign each transaction to an account for proper financial tracking
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {bankTransactions.map((transaction) => (
+              <div key={transaction.id} className={`p-4 border rounded-lg ${
+                transaction.is_categorized ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="grid grid-cols-4 gap-4 items-center">
+                  <div>
+                    <p className="font-medium">{new Date(transaction.transaction_date).toLocaleDateString()}</p>
+                    <p className="text-sm text-slate-600">{transaction.description}</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <span className={`font-bold ${
+                      transaction.transaction_type === 'credit' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.transaction_type === 'credit' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                    </span>
+                    <p className="text-xs text-slate-500 capitalize">{transaction.transaction_type}</p>
+                  </div>
+                  
+                  <div>
+                    {transaction.is_categorized ? (
+                      <div>
+                        <p className="font-medium text-green-700">{transaction.account_name}</p>
+                        {transaction.category && (
+                          <p className="text-sm text-slate-600">{transaction.category}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <select
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const [accountId, accountName] = e.target.value.split('|');
+                            handleTransactionCategorization(
+                              transaction.id,
+                              accountId,
+                              accountName,
+                              ''
+                            );
+                          }
+                        }}
+                        defaultValue=""
+                      >
+                        <option value="">Select Account...</option>
+                        {accounts.map((account) => (
+                          <option key={account.id} value={`${account.id}|${account.name}`}>
+                            {account.name} ({account.account_type})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  
+                  <div className="text-center">
+                    {transaction.is_categorized ? (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
+                        Categorized
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {bankTransactions.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No transactions to categorize</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCategorizationDialog(false)}
+            >
+              Close
+            </Button>
+            {bankTransactions.some(t => t.is_categorized) && (
+              <Button 
+                onClick={() => {
+                  createJournalEntriesFromBankTransactions(selectedBankStatement);
+                  setShowCategorizationDialog(false);
+                }}
+              >
+                Create Journal Entries ({bankTransactions.filter(t => t.is_categorized).length} transactions)
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
