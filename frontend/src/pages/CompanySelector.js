@@ -315,6 +315,20 @@ export default function CompanySelector({ onCompanySelect }) {
           </Card>
         )}
 
+        {/* Deleted Companies Button */}
+        {deletedCompanies.length > 0 && (
+          <div className="mb-4 text-center">
+            <Button 
+              variant="outline"
+              onClick={() => setShowDeletedDialog(true)}
+              className="text-orange-600 hover:text-orange-700"
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              View Deleted Companies ({deletedCompanies.length})
+            </Button>
+          </div>
+        )}
+
         {/* Create New Company Button */}
         <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
           <DialogTrigger asChild>
