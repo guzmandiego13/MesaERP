@@ -406,6 +406,193 @@ export default function Settings({ company }) {
     }
   };
 
+  // CSV Import handlers
+  const downloadAccountsTemplate = async () => {
+    try {
+      const response = await axios.get(`${API}/templates/accounts/download`, { 
+        headers,
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'accounts_template.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Accounts template downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download template");
+    }
+  };
+
+  const downloadCashFlowsTemplate = async () => {
+    try {
+      const response = await axios.get(`${API}/templates/cashflows/download`, { 
+        headers,
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'cashflows_template.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Cash flows template downloaded successfully");
+    } catch (error) {
+      toast.error("Failed to download template");
+    }
+  };
+
+  const handleAccountsTemplateUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${API}/accounts/upload-template?company_id=${company.id}`, formData, {
+        headers: {
+          ...headers,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      toast.success(`${response.data.created_accounts} accounts created successfully`);
+      if (response.data.errors.length > 0) {
+        console.warn("Upload errors:", response.data.errors);
+      }
+      loadData(); // Refresh accounts
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to upload accounts template");
+    } finally {
+      setUploading(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
+
+  const handleCashFlowsTemplateUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${API}/cashflows/upload-template?company_id=${company.id}`, formData, {
+        headers: {
+          ...headers,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      toast.success(`${response.data.created_cashflows} cash flows and ${response.data.created_journal_entries} journal entries created`);
+      if (response.data.errors.length > 0) {
+        console.warn("Upload errors:", response.data.errors);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to upload cash flows template");
+    } finally {
+      setUploading(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
+
+  const handleBankStatementUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${API}/bank-statements/upload?company_id=${company.id}`, formData, {
+        headers: {
+          ...headers,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      toast.success(`Bank statement uploaded with ${response.data.transactions_count} transactions`);
+      if (response.data.errors.length > 0) {
+        console.warn("Upload errors:", response.data.errors);
+      }
+      loadBankStatements();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to upload bank statement");
+    } finally {
+      setUploading(false);
+      event.target.value = ''; // Reset file input
+    }
+  };
+
+  const loadBankStatements = async () => {
+    try {
+      const response = await axios.get(`${API}/bank-statements?company_id=${company.id}`, { headers });
+      setBankStatements(response.data);
+    } catch (error) {
+      console.error("Failed to load bank statements:", error);
+    }
+  };
+
+  const loadBankTransactions = async (statementId) => {
+    try {
+      const response = await axios.get(`${API}/bank-statements/${statementId}/transactions`, { headers });
+      setBankTransactions(response.data);
+      setSelectedBankStatement(statementId);
+      setShowCategorizationDialog(true);
+    } catch (error) {
+      toast.error("Failed to load bank transactions");
+    }
+  };
+
+  const handleTransactionCategorization = async (transactionId, accountId, category, notes) => {
+    try {
+      await axios.post(`${API}/bank-transactions/categorize`, [{
+        transaction_id: transactionId,
+        account_id: accountId,
+        category: category,
+        notes: notes
+      }], { headers });
+
+      // Update local state
+      setBankTransactions(prev => 
+        prev.map(t => 
+          t.id === transactionId 
+            ? { ...t, account_id: accountId, category, notes, is_categorized: true }
+            : t
+        )
+      );
+
+      toast.success("Transaction categorized successfully");
+    } catch (error) {
+      toast.error("Failed to categorize transaction");
+    }
+  };
+
+  const createJournalEntriesFromBankTransactions = async (statementId) => {
+    try {
+      const response = await axios.post(`${API}/bank-transactions/${statementId}/create-journal-entries`, {}, { headers });
+      toast.success(`${response.data.created_entries} journal entries created from bank transactions`);
+      loadBankTransactions(statementId); // Reload to update status
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to create journal entries");
+    }
+  };
+
   const handleCancelCompanyEdit = () => {
     setEditingCompany(null);
     setCompanyForm({
