@@ -605,6 +605,81 @@ export default function Finance() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="journal">
+          <Card data-testid="journal-entries-list">
+            <CardHeader>
+              <CardTitle>Journal Entries</CardTitle>
+              <p className="text-sm text-slate-600">
+                Period: {dateRange.start} to {dateRange.end}
+              </p>
+            </CardHeader>
+            <CardContent>
+              {journalEntries.length > 0 ? (
+                <div className="space-y-4">
+                  {journalEntries.map((entry) => (
+                    <div key={entry.id} className="p-4 border border-slate-200 rounded-lg">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-semibold text-slate-900">{entry.description}</h4>
+                          <p className="text-sm text-slate-600">
+                            {new Date(entry.entry_date).toLocaleDateString()}
+                            {entry.reference && <span className="ml-2">• Ref: {entry.reference}</span>}
+                          </p>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${
+                          entry.is_posted ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {entry.is_posted ? 'Posted' : 'Draft'}
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b border-slate-200">
+                              <th className="text-left py-2 font-medium text-slate-700">Account</th>
+                              <th className="text-left py-2 font-medium text-slate-700">Memo</th>
+                              <th className="text-right py-2 font-medium text-slate-700">Debit</th>
+                              <th className="text-right py-2 font-medium text-slate-700">Credit</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {entry.lines.map((line, idx) => (
+                              <tr key={idx} className="border-b border-slate-100">
+                                <td className="py-2">
+                                  <span className="font-mono text-xs text-slate-600">{line.account_code}</span>
+                                  <span className="ml-2 text-slate-900">{line.account_name}</span>
+                                </td>
+                                <td className="py-2 text-slate-600">{line.memo}</td>
+                                <td className="py-2 text-right font-mono">
+                                  {line.debit > 0 ? `$${line.debit.toFixed(2)}` : '-'}
+                                </td>
+                                <td className="py-2 text-right font-mono">
+                                  {line.credit > 0 ? `$${line.credit.toFixed(2)}` : '-'}
+                                </td>
+                              </tr>
+                            ))}
+                            <tr className="font-semibold">
+                              <td colSpan="2" className="py-2 text-right">Total:</td>
+                              <td className="py-2 text-right font-mono">
+                                ${entry.lines.reduce((sum, l) => sum + l.debit, 0).toFixed(2)}
+                              </td>
+                              <td className="py-2 text-right font-mono">
+                                ${entry.lines.reduce((sum, l) => sum + l.credit, 0).toFixed(2)}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-8 text-slate-500">No journal entries for this period</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
