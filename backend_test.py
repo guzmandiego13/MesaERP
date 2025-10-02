@@ -803,7 +803,7 @@ class BackendTester:
     
     def run_all_tests(self):
         """Run all backend tests"""
-        print("🚀 Starting Backend API Tests for Company and Business Unit Edit/Delete")
+        print("🚀 Starting Backend API Tests for Company Management with Soft Delete")
         print("=" * 80)
         
         # Authentication
@@ -818,6 +818,7 @@ class BackendTester:
         
         # Run all tests
         tests = [
+            # Original CRUD tests
             self.test_company_update,
             self.test_company_update_invalid_id,
             self.test_business_unit_update,
@@ -826,7 +827,18 @@ class BackendTester:
             self.test_company_delete_success,
             self.test_business_unit_delete_with_locations,
             self.test_business_unit_delete_success,
-            self.test_unauthorized_access
+            self.test_unauthorized_access,
+            
+            # New soft delete tests
+            self.test_soft_delete_company,
+            self.test_soft_delete_company_with_subsidiaries,
+            self.test_get_companies_excludes_deleted,
+            self.test_get_deleted_companies,
+            self.test_restore_company,
+            self.test_restore_non_deleted_company,
+            self.test_soft_delete_already_deleted_company,
+            self.test_soft_delete_invalid_company_id,
+            self.test_restore_invalid_company_id
         ]
         
         passed = 0
