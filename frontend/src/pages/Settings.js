@@ -229,9 +229,12 @@ export default function Settings({ company }) {
       </div>
 
       <Tabs defaultValue="subsidiaries" className="w-full">
-        <TabsList>
-          <TabsTrigger value="subsidiaries">Subsidiary Companies</TabsTrigger>
+        <TabsList className="grid grid-cols-5 w-full">
+          <TabsTrigger value="subsidiaries">Subsidiaries</TabsTrigger>
           <TabsTrigger value="business-units">Business Units</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="apis">APIs</TabsTrigger>
+          <TabsTrigger value="branding">Branding</TabsTrigger>
         </TabsList>
 
         <TabsContent value="subsidiaries">
