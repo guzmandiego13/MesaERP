@@ -112,56 +112,37 @@ class ConsolidationIntegrationTester:
             # 4. Create accounts for journal entries (workaround for accounts endpoint issue)
             print("3. Creating test accounts...")
             
+            # Create unique accounts for this test
+            timestamp = str(int(datetime.now().timestamp()))
+            
             # Create cash account
             cash_account_data = {
                 "company_id": main_company_id,
-                "code": "1000",
-                "name": "Cash",
+                "code": f"1{timestamp[-3:]}",
+                "name": f"Cash Test {timestamp}",
                 "account_type": "Asset"
             }
             response = self.session.post(f"{BASE_URL}/finance/accounts", json=cash_account_data)
             if response.status_code == 200:
                 cash_account = response.json()
                 print("✅ Created Cash account")
-            elif response.status_code == 400 and "already exists" in response.text:
-                # Account already exists, create a unique one
-                cash_account_data["code"] = "1001"
-                cash_account_data["name"] = "Cash Test"
-                response = self.session.post(f"{BASE_URL}/finance/accounts", json=cash_account_data)
-                if response.status_code == 200:
-                    cash_account = response.json()
-                    print("✅ Created Cash Test account")
-                else:
-                    print("❌ Failed to create cash account")
-                    return False
             else:
-                print("❌ Failed to create cash account")
+                print(f"❌ Failed to create cash account: {response.text}")
                 return False
             
             # Create revenue account
             revenue_account_data = {
                 "company_id": main_company_id,
-                "code": "4000",
-                "name": "Revenue",
+                "code": f"4{timestamp[-3:]}",
+                "name": f"Revenue Test {timestamp}",
                 "account_type": "Revenue"
             }
             response = self.session.post(f"{BASE_URL}/finance/accounts", json=revenue_account_data)
             if response.status_code == 200:
                 revenue_account = response.json()
                 print("✅ Created Revenue account")
-            elif response.status_code == 400 and "already exists" in response.text:
-                # Account already exists, create a unique one
-                revenue_account_data["code"] = "4001"
-                revenue_account_data["name"] = "Revenue Test"
-                response = self.session.post(f"{BASE_URL}/finance/accounts", json=revenue_account_data)
-                if response.status_code == 200:
-                    revenue_account = response.json()
-                    print("✅ Created Revenue Test account")
-                else:
-                    print("❌ Failed to create revenue account")
-                    return False
             else:
-                print("❌ Failed to create revenue account")
+                print(f"❌ Failed to create revenue account: {response.text}")
                 return False
             
             # 5. Create journal entries for each business unit
