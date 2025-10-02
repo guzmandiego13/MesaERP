@@ -301,6 +301,63 @@ export default function Settings({ company }) {
     }
   };
 
+  // Helper function to render permission checkboxes
+  const renderPermissionCheckbox = (key, label, description) => (
+    <label key={key} className="flex items-start gap-3 p-3 border border-slate-200 rounded-lg hover:bg-slate-50">
+      <input
+        type="checkbox"
+        checked={userForm.permissions[key]}
+        onChange={(e) => setUserForm({
+          ...userForm,
+          permissions: { ...userForm.permissions, [key]: e.target.checked }
+        })}
+        className="w-4 h-4 mt-1 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+      />
+      <div>
+        <span className="text-sm font-medium text-slate-900">{label}</span>
+        {description && (
+          <p className="text-xs text-slate-500 mt-1">{description}</p>
+        )}
+      </div>
+    </label>
+  );
+
+  const permissionGroups = {
+    "Dashboard & Reporting": [
+      { key: "view_dashboard", label: "View Dashboard", description: "Access to main dashboard and basic reports" },
+      { key: "view_reports", label: "View Reports", description: "Access to detailed financial and operational reports" },
+      { key: "export_data", label: "Export Data", description: "Download reports and data exports" }
+    ],
+    "Financial Management": [
+      { key: "view_finances", label: "View Finances", description: "Access to financial data and accounts" },
+      { key: "manage_accounts_ledger", label: "Manage Accounts & Ledger", description: "Add/edit accounts and view ledger" },
+      { key: "create_journal_entries", label: "Create Journal Entries", description: "Add new financial transactions" },
+      { key: "approve_journal_entries", label: "Approve Journal Entries", description: "Review and approve pending entries" }
+    ],
+    "Company & Business Units": [
+      { key: "manage_information", label: "Manage Information", description: "Edit company and business unit details" },
+      { key: "manage_companies", label: "Manage Companies", description: "Create/edit/delete companies and subsidiaries" },
+      { key: "manage_business_units", label: "Manage Business Units", description: "Create/edit/delete business units" }
+    ],
+    "User Management": [
+      { key: "view_users", label: "View Users", description: "See list of users and their roles" },
+      { key: "manage_users", label: "Manage Users", description: "Create/edit/delete users and permissions" }
+    ],
+    "Settings & Configuration": [
+      { key: "manage_settings", label: "Manage Settings", description: "Access to system settings and configuration" },
+      { key: "manage_api_keys", label: "Manage API Keys", description: "Add/edit/delete external API integrations" },
+      { key: "manage_branding", label: "Manage Branding", description: "Customize company colors and branding" }
+    ],
+    "Inventory & Operations": [
+      { key: "view_inventory", label: "View Inventory", description: "Access to inventory levels and items" },
+      { key: "manage_inventory", label: "Manage Inventory", description: "Add/edit inventory items and movements" },
+      { key: "manage_procurement", label: "Manage Procurement", description: "Handle purchase orders and vendor management" }
+    ],
+    "Administrative": [
+      { key: "full_access", label: "Full Access (Admin)", description: "Complete access to all features and settings" }
+    ]
+  };
+
   // Company (subsidiary) edit handlers
   const handleEditCompany = (companyId) => {
     const companyToEdit = subsidiaries.find(c => c.id === companyId);
