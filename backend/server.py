@@ -1452,6 +1452,7 @@ async def get_companies(current_user: dict = Depends(get_current_user)):
     
     # Enrich with subsidiary count
     for company in companies:
+        company.pop("_id", None)  # Remove MongoDB _id
         subsidiary_count = await db.companies.count_documents({
             "tenant_id": current_user["tenant_id"],
             "parent_company_id": company["id"]
