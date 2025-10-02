@@ -813,6 +813,8 @@ async def update_account(
     return updated_account
 
 class CreateJournalEntryRequest(BaseModel):
+    company_id: str
+    business_unit_id: Optional[str] = None
     entry_date: str
     description: str
     lines: List[Dict[str, Any]]
@@ -825,10 +827,6 @@ async def create_journal_entry(
 ):
     """Create a manual journal entry"""
     tenant_id = current_user["tenant_id"]
-    entry_date = request.entry_date
-    description = request.description
-    lines = request.lines
-    reference = request.reference
     
     # Validate lines balance (debits = credits)
     total_debits = sum(line.get("debit", 0) for line in lines)
