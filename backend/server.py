@@ -874,16 +874,36 @@ async def get_journal_entries(
 async def get_profit_loss(
     start_date: str = Query(...),
     end_date: str = Query(...),
+    company_id: Optional[str] = None,
+    business_unit_id: Optional[str] = None,
     location_id: Optional[str] = None,
+    consolidated: bool = False,  # For parent company consolidated view
     current_user: dict = Depends(get_current_user)
 ):
-    """Generate P&L statement"""
+    """Generate P&L statement with company/business unit filtering"""
     tenant_id = current_user["tenant_id"]
     start = datetime.fromisoformat(start_date)
     end = datetime.fromisoformat(end_date)
     
-    # Get all accounts
-    accounts = await db.accounts.find({"tenant_id": tenant_id}).to_list(1000)
+    # Build company filter
+    company_ids = []
+    if company_id:
+        company_ids.append(company_id)
+        
+        # If consolidated, include all subsidiaries
+        if consolidated:
+            subsidiaries = await db.companies.find({
+                "tenant_id": tenant_id,
+                "parent_company_id": company_id
+            }).to_list(1000)
+            company_ids.extend([sub["id"] for sub in subsidiaries])
+    
+    # Get all accounts for the relevant companies
+    account_query = {"tenant_id": tenant_id}
+    if company_ids:
+        account_query["company_id"] = {"$in": company_ids} if len(company_ids) > 1 else company_ids[0]
+    
+    accounts = await db.accounts.find(account_query).to_list(1000)
     account_map = {acc["id"]: acc for acc in accounts}
     
     # Get journal entries in date range
@@ -892,6 +912,10 @@ async def get_profit_loss(
         "entry_date": {"$gte": start, "$lte": end},
         "is_posted": True
     }
+    if company_ids:
+        query["company_id"] = {"$in": company_ids} if len(company_ids) > 1 else company_ids[0]
+    if business_unit_id:
+        query["business_unit_id"] = business_unit_id
     if location_id:
         query["location_id"] = location_id
     
