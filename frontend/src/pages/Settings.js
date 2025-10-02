@@ -74,14 +74,27 @@ export default function Settings({ company }) {
 
   const loadData = async () => {
     try {
-      const [companiesRes, buRes] = await Promise.all([
+      const [companiesRes, buRes, usersRes, apiKeysRes, brandingRes] = await Promise.all([
         axios.get(`${API}/companies`, { headers }),
-        axios.get(`${API}/business-units?company_id=${company.id}`, { headers })
+        axios.get(`${API}/business-units?company_id=${company.id}`, { headers }),
+        axios.get(`${API}/users`, { headers }),
+        axios.get(`${API}/api-keys/${company.id}`, { headers }),
+        axios.get(`${API}/branding/${company.id}`, { headers })
       ]);
+      
       // Filter subsidiaries of current company
       const subs = companiesRes.data.filter(c => c.parent_company_id === company.id);
       setSubsidiaries(subs);
       setBusinessUnits(buRes.data);
+      setUsers(usersRes.data);
+      setAPIKeys(apiKeysRes.data);
+      setBranding(brandingRes.data);
+      setBrandingForm({
+        logo_url: brandingRes.data.logo_url || "",
+        primary_color: brandingRes.data.primary_color || "#3b82f6",
+        secondary_color: brandingRes.data.secondary_color || "#8b5cf6",
+        accent_color: brandingRes.data.accent_color || "#10b981"
+      });
     } catch (error) {
       toast.error("Failed to load data");
     }
