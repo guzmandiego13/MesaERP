@@ -385,13 +385,13 @@ export default function Settings({ company }) {
 
   const handleDeleteCompany = async (companyId) => {
     const companyToDelete = subsidiaries.find(c => c.id === companyId);
-    if (!window.confirm(`Are you sure you want to delete "${companyToDelete?.name}"? This action cannot be undone and will delete all associated data.`)) {
+    if (!window.confirm(`Are you sure you want to delete "${companyToDelete?.name}"? This action will backup the data for 6 months and allow restoration.`)) {
       return;
     }
     
     try {
-      await axios.delete(`${API}/companies/${companyId}`, { headers });
-      toast.success("Subsidiary deleted successfully");
+      await axios.post(`${API}/companies/${companyId}/soft-delete`, {}, { headers });
+      toast.success("Subsidiary deleted and backed up for 6 months");
       loadData();
     } catch (error) {
       toast.error(error.response?.data?.detail || "Failed to delete subsidiary");
