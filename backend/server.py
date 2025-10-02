@@ -349,7 +349,7 @@ def get_coa_template(industry: str) -> List[Dict[str, str]]:
 
 @api_router.post("/auth/setup", response_model=LoginResponse)
 async def setup_tenant(request: CreateTenantRequest):
-    """Create initial tenant, admin user, locations, and COA"""
+    """Create initial tenant, admin user, company, business units, locations, and COA"""
     # Create tenant
     tenant = Tenant(
         name=request.name,
@@ -367,11 +367,58 @@ async def setup_tenant(request: CreateTenantRequest):
     )
     await db.users.insert_one(user.dict())
     
+    # Create first company
+    company_name = request.company_name or request.name
+    company = Company(
+        tenant_id=tenant.id,
+        name=company_name,
+        industry=request.industry
+    )
+    await db.companies.insert_one(company.dict())
+    
+    # Create default business units
+    business_units = [
+        BusinessUnit(
+            tenant_id=tenant.id,
+            company_id=company.id,
+            name="Operations",
+            code="BU-OPS",
+            description="Main operational unit"
+        ),
+        BusinessUnit(
+            tenant_id=tenant.id,
+            company_id=company.id,
+            name="Sales",
+            code="BU-SALES",
+            description="Sales and marketing"
+        )
+    ]
+    for bu in business_units:
+        await db.business_units.insert_one(bu.dict())
+    
     # Create sample locations
     locations = [
-        Location(tenant_id=tenant.id, name="Main Store", address="123 Main St"),
-        Location(tenant_id=tenant.id, name="Downtown Branch", address="456 Downtown Ave"),
-        Location(tenant_id=tenant.id, name="Airport Location", address="789 Airport Rd")
+        Location(
+            tenant_id=tenant.id,
+            company_id=company.id,
+            business_unit_id=business_units[0].id,
+            name="Main Store",
+            address="123 Main St"
+        ),
+        Location(
+            tenant_id=tenant.id,
+            company_id=company.id,
+            business_unit_id=business_units[0].id,
+            name="Downtown Branch",
+            address="456 Downtown Ave"
+        ),
+        Location(
+            tenant_id=tenant.id,
+            company_id=company.id,
+            business_unit_id=business_units[1].id,
+            name="Airport Location",
+            address="789 Airport Rd"
+        )
     ]
     for loc in locations:
         await db.locations.insert_one(loc.dict())
@@ -381,6 +428,7 @@ async def setup_tenant(request: CreateTenantRequest):
     for acc in coa_template:
         account = Account(
             tenant_id=tenant.id,
+            company_id=company.id,
             code=acc["code"],
             name=acc["name"],
             account_type=AccountTypeEnum(acc["type"])
