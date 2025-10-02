@@ -80,6 +80,71 @@ export default function CompanySelector({ onCompanySelect }) {
     }
   };
 
+  const handleEditCompany = (company) => {
+    setEditingCompany(company.id);
+    setCompanyForm({
+      name: company.name,
+      industry: company.industry,
+      tax_id: company.tax_id || "",
+      accounting_basis: company.accounting_basis
+    });
+  };
+
+  const handleUpdateCompany = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/companies/${editingCompany}`, companyForm, { headers });
+      toast.success("Company updated successfully");
+      setEditingCompany(null);
+      loadCompanies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to update company");
+    }
+  };
+
+  const handleDeleteClick = (company) => {
+    setCompanyToDelete(company);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!companyToDelete) return;
+    
+    try {
+      await axios.post(`${API}/companies/${companyToDelete.id}/soft-delete`, {}, { headers });
+      toast.success(`Company "${companyToDelete.name}" has been deleted and backed up for 6 months`);
+      setShowDeleteConfirm(false);
+      setCompanyToDelete(null);
+      loadCompanies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to delete company");
+    }
+  };
+
+  const handleRestoreCompany = async (companyId, companyName) => {
+    if (!window.confirm(`Are you sure you want to restore "${companyName}"?`)) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/companies/${companyId}/restore`, {}, { headers });
+      toast.success(`Company "${companyName}" has been restored successfully`);
+      loadCompanies();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || "Failed to restore company");
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingCompany(null);
+    setCompanyForm({
+      name: "",
+      industry: "restaurant", 
+      tax_id: "",
+      accounting_basis: "Accrual"
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
