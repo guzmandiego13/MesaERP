@@ -1567,9 +1567,12 @@ async def create_business_unit(
         description=request.description,
         manager_name=request.manager_name
     )
-    await db.business_units.insert_one(business_unit.dict())
     
-    return business_unit
+    bu_dict = business_unit.dict()
+    await db.business_units.insert_one(bu_dict)
+    bu_dict.pop("_id", None)
+    
+    return bu_dict
 
 # ============================================================================
 # LOCATIONS
