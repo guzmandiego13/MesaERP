@@ -1982,7 +1982,7 @@ class BackendTester:
             self.test_business_unit_delete_success,
             self.test_unauthorized_access,
             
-            # Soft delete tests
+            # Company soft delete tests
             self.test_soft_delete_company,
             self.test_soft_delete_company_with_subsidiaries,
             self.test_get_companies_excludes_deleted,
@@ -1992,6 +1992,24 @@ class BackendTester:
             self.test_soft_delete_already_deleted_company,
             self.test_soft_delete_invalid_company_id,
             self.test_restore_invalid_company_id,
+            
+            # Business unit soft delete tests
+            self.test_business_unit_soft_delete,
+            self.test_business_unit_soft_delete_with_locations,
+            self.test_get_business_units_excludes_soft_deleted,
+            self.test_get_deleted_business_units,
+            self.test_restore_business_unit,
+            self.test_restore_non_deleted_business_unit,
+            self.test_business_unit_soft_delete_already_deleted,
+            self.test_business_unit_soft_delete_invalid_id,
+            self.test_business_unit_restore_invalid_id,
+            
+            # Enhanced user management tests
+            self.test_user_update_with_new_fields,
+            self.test_user_email_uniqueness_validation,
+            self.test_user_permission_updates,
+            self.test_user_update_invalid_id,
+            self.test_user_update_unauthorized_access,
             
             # Business unit consolidation tests
             self.test_create_business_unit_with_consolidation,
