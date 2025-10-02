@@ -26,7 +26,6 @@ export default function Settings({ company }) {
   });
 
   const [buForm, setBUForm] = useState({
-    company_id: "",
     name: "",
     code: "",
     description: "",
