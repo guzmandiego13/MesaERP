@@ -1771,8 +1771,11 @@ async def get_business_units(
     company_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get business units, optionally filtered by company"""
-    query = {"tenant_id": current_user["tenant_id"]}
+    """Get business units, optionally filtered by company (excludes soft-deleted)"""
+    query = {
+        "tenant_id": current_user["tenant_id"],
+        "deleted_at": None  # Exclude soft-deleted business units
+    }
     if company_id:
         query["company_id"] = company_id
     
