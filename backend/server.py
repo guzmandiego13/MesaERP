@@ -293,6 +293,8 @@ class CreateBusinessUnitRequest(BaseModel):
     code: str
     description: Optional[str] = None
     manager_name: Optional[str] = None
+    parent_subsidiary_id: Optional[str] = None  # Optional manual assignment
+    consolidation_enabled: Optional[bool] = True
 
 class CreateUserRequest(BaseModel):
     email: EmailStr
