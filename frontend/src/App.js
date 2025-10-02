@@ -65,6 +65,7 @@ function App() {
             <Route path="sales" element={<Sales />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="procurement" element={<Procurement />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>
