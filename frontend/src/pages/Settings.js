@@ -32,6 +32,7 @@ export default function Settings({ company }) {
   const [bankStatements, setBankStatements] = useState([]);
   const [selectedBankStatement, setSelectedBankStatement] = useState(null);
   const [bankTransactions, setBankTransactions] = useState([]);
+  const [accounts, setAccounts] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(null);
   const [showCategorizationDialog, setShowCategorizationDialog] = useState(false);
