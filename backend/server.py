@@ -608,6 +608,147 @@ async def get_accounts(current_user: dict = Depends(get_current_user)):
     accounts = await db.accounts.find({"tenant_id": current_user["tenant_id"]}).to_list(1000)
     return accounts
 
+@api_router.post("/finance/accounts")
+async def create_account(
+    code: str,
+    name: str,
+    account_type: AccountTypeEnum,
+    parent_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new account"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Check if code already exists
+    existing = await db.accounts.find_one({"tenant_id": tenant_id, "code": code})
+    if existing:
+        raise HTTPException(status_code=400, detail="Account code already exists")
+    
+    account = Account(
+        tenant_id=tenant_id,
+        code=code,
+        name=name,
+        account_type=account_type,
+        parent_id=parent_id
+    )
+    await db.accounts.insert_one(account.dict())
+    return account
+
+@api_router.put("/finance/accounts/{account_id}")
+async def update_account(
+    account_id: str,
+    code: Optional[str] = None,
+    name: Optional[str] = None,
+    account_type: Optional[AccountTypeEnum] = None,
+    is_active: Optional[bool] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an existing account"""
+    tenant_id = current_user["tenant_id"]
+    
+    update_data = {}
+    if code is not None:
+        # Check if new code conflicts
+        existing = await db.accounts.find_one({
+            "tenant_id": tenant_id, 
+            "code": code,
+            "id": {"$ne": account_id}
+        })
+        if existing:
+            raise HTTPException(status_code=400, detail="Account code already exists")
+        update_data["code"] = code
+    
+    if name is not None:
+        update_data["name"] = name
+    if account_type is not None:
+        update_data["account_type"] = account_type
+    if is_active is not None:
+        update_data["is_active"] = is_active
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    result = await db.accounts.update_one(
+        {"id": account_id, "tenant_id": tenant_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    updated_account = await db.accounts.find_one({"id": account_id, "tenant_id": tenant_id})
+    return updated_account
+
+@api_router.post("/finance/journal-entries")
+async def create_journal_entry(
+    entry_date: str,
+    description: str,
+    lines: List[Dict[str, Any]],
+    reference: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a manual journal entry"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Validate lines balance (debits = credits)
+    total_debits = sum(line.get("debit", 0) for line in lines)
+    total_credits = sum(line.get("credit", 0) for line in lines)
+    
+    if abs(total_debits - total_credits) > 0.01:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Journal entry is not balanced. Debits: {total_debits}, Credits: {total_credits}"
+        )
+    
+    # Verify all accounts exist
+    for line in lines:
+        account = await db.accounts.find_one({
+            "id": line["account_id"],
+            "tenant_id": tenant_id
+        })
+        if not account:
+            raise HTTPException(status_code=404, detail=f"Account {line['account_id']} not found")
+    
+    je = JournalEntry(
+        tenant_id=tenant_id,
+        entry_date=datetime.fromisoformat(entry_date),
+        description=description,
+        reference=reference,
+        is_posted=True,
+        lines=lines
+    )
+    
+    await db.journal_entries.insert_one(je.dict())
+    return je
+
+@api_router.get("/finance/journal-entries")
+async def get_journal_entries(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get journal entries"""
+    tenant_id = current_user["tenant_id"]
+    
+    query = {"tenant_id": tenant_id}
+    if start_date and end_date:
+        query["entry_date"] = {
+            "$gte": datetime.fromisoformat(start_date),
+            "$lte": datetime.fromisoformat(end_date)
+        }
+    
+    entries = await db.journal_entries.find(query).sort("entry_date", -1).to_list(1000)
+    
+    # Enrich with account names
+    for entry in entries:
+        for line in entry.get("lines", []):
+            account = await db.accounts.find_one({"id": line["account_id"]})
+            if account:
+                line["account_name"] = account["name"]
+                line["account_code"] = account["code"]
+    
+    return entries
+
 @api_router.get("/finance/pl")
 async def get_profit_loss(
     start_date: str = Query(...),
