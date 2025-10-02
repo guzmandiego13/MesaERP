@@ -1571,7 +1571,7 @@ async def delete_company(
     company_id: str,
     current_user: dict = Depends(get_current_user)
 ):
-    """Delete a company and all associated data"""
+    """DEPRECATED: Use soft-delete endpoint instead. Hard delete a company and all associated data"""
     tenant_id = current_user["tenant_id"]
     
     # Check if company has subsidiaries
