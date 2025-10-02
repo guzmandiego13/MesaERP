@@ -2405,8 +2405,8 @@ INV-TEST-003,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Non Existent Account,Test
             # First ensure we have a cash account
             cash_account_request = {
                 "company_id": self.test_company_id,
-                "code": "1000",
-                "name": "Cash",
+                "code": "1010",
+                "name": "Test Cash Account",
                 "account_type": "Asset"
             }
             cash_response = self.session.post(f"{BASE_URL}/finance/accounts", json=cash_account_request)
