@@ -44,9 +44,11 @@ export default function Settings({ company }) {
     try {
       const [companiesRes, buRes] = await Promise.all([
         axios.get(`${API}/companies`, { headers }),
-        axios.get(`${API}/business-units`, { headers })
+        axios.get(`${API}/business-units?company_id=${company.id}`, { headers })
       ]);
-      setCompanies(companiesRes.data);
+      // Filter subsidiaries of current company
+      const subs = companiesRes.data.filter(c => c.parent_company_id === company.id);
+      setSubsidiaries(subs);
       setBusinessUnits(buRes.data);
     } catch (error) {
       toast.error("Failed to load data");
@@ -58,20 +60,19 @@ export default function Settings({ company }) {
     try {
       await axios.post(`${API}/companies`, {
         ...companyForm,
-        parent_company_id: companyForm.parent_company_id || null
+        parent_company_id: company.id  // Always create as subsidiary of current parent
       }, { headers });
-      toast.success("Company created successfully");
+      toast.success("Subsidiary company created successfully");
       setShowCompanyDialog(false);
       setCompanyForm({
         name: "",
         industry: "restaurant",
-        parent_company_id: "",
         tax_id: "",
         accounting_basis: "Accrual"
       });
       loadData();
     } catch (error) {
-      toast.error(error.response?.data?.detail || "Failed to create company");
+      toast.error(error.response?.data?.detail || "Failed to create subsidiary");
     }
   };
 
