@@ -121,13 +121,14 @@ export default function Settings({ company }) {
 
   const loadData = async () => {
     try {
-      const [companiesRes, buRes, usersRes, apiKeysRes, brandingRes, deletedBUsRes] = await Promise.all([
+      const [companiesRes, buRes, usersRes, apiKeysRes, brandingRes, deletedBUsRes, accountsRes] = await Promise.all([
         axios.get(`${API}/companies`, { headers }),
         axios.get(`${API}/business-units?company_id=${company.id}`, { headers }),
         axios.get(`${API}/users`, { headers }),
         axios.get(`${API}/api-keys/${company.id}`, { headers }),
         axios.get(`${API}/branding/${company.id}`, { headers }),
-        axios.get(`${API}/business-units/deleted`, { headers }).catch(() => ({ data: [] }))
+        axios.get(`${API}/business-units/deleted`, { headers }).catch(() => ({ data: [] })),
+        axios.get(`${API}/accounts?company_id=${company.id}`, { headers }).catch(() => ({ data: [] }))
       ]);
       
       // Filter subsidiaries of current company
@@ -138,6 +139,7 @@ export default function Settings({ company }) {
       setAPIKeys(apiKeysRes.data);
       setBranding(brandingRes.data);
       setDeletedBusinessUnits(deletedBUsRes.data.filter(bu => bu.company_id === company.id));
+      setAccounts(accountsRes.data);
       setBrandingForm({
         logo_url: brandingRes.data.logo_url || "",
         primary_color: brandingRes.data.primary_color || "#3b82f6",
