@@ -1953,6 +1953,530 @@ class BackendTester:
         except Exception as e:
             self.log_result("User Update Unauthorized", False, f"Error: {str(e)}")
             return False
+
+    # ============================================================================
+    # CSV IMPORT SYSTEM TESTS
+    # ============================================================================
+
+    def test_download_accounts_template(self):
+        """Test GET /templates/accounts/download"""
+        try:
+            response = self.session.get(f"{BASE_URL}/templates/accounts/download")
+            
+            if response.status_code == 200:
+                # Check content type
+                if response.headers.get('content-type') == 'text/csv; charset=utf-8':
+                    # Check content
+                    content = response.text
+                    if 'account_name,description,account_type,account_code' in content:
+                        self.log_result("Download Accounts Template", True, "CSV template downloaded successfully")
+                        return True
+                    else:
+                        self.log_result("Download Accounts Template", False, "CSV template missing expected headers")
+                        return False
+                else:
+                    self.log_result("Download Accounts Template", False, f"Wrong content type: {response.headers.get('content-type')}")
+                    return False
+            else:
+                self.log_result("Download Accounts Template", False, f"Request failed with status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Download Accounts Template", False, f"Error: {str(e)}")
+            return False
+
+    def test_upload_accounts_template(self):
+        """Test POST /accounts/upload-template"""
+        if not self.test_company_id:
+            self.log_result("Upload Accounts Template", False, "No test company ID available")
+            return False
+        
+        try:
+            # Create test CSV content
+            csv_content = """account_name,description,account_type,account_code
+Test Cash Account,Test cash account for CSV import,Asset,1001
+Test Revenue Account,Test revenue account for CSV import,Revenue,4001
+Test Expense Account,Test expense account for CSV import,Expense,6001"""
+            
+            # Create file-like object
+            files = {'file': ('test_accounts.csv', csv_content, 'text/csv')}
+            data = {'company_id': self.test_company_id}
+            
+            response = self.session.post(f"{BASE_URL}/accounts/upload-template", files=files, data=data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("success") == True and 
+                    data.get("created_accounts") == 3 and
+                    len(data.get("accounts", [])) == 3):
+                    
+                    # Clean up created accounts
+                    for account in data["accounts"]:
+                        try:
+                            self.session.delete(f"{BASE_URL}/finance/accounts/{account['id']}")
+                        except:
+                            pass
+                    
+                    self.log_result("Upload Accounts Template", True, "Accounts created successfully from CSV template")
+                    return True
+                else:
+                    self.log_result("Upload Accounts Template", False, "Unexpected response format", data)
+                    return False
+            else:
+                self.log_result("Upload Accounts Template", False, f"Upload failed with status {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_result("Upload Accounts Template", False, f"Error: {str(e)}")
+            return False
+
+    def test_upload_accounts_template_duplicate_validation(self):
+        """Test account template upload with duplicate account names"""
+        if not self.test_company_id:
+            self.log_result("Upload Accounts Template Duplicate", False, "No test company ID available")
+            return False
+        
+        try:
+            # Create CSV with duplicate account names
+            csv_content = """account_name,description,account_type,account_code
+Duplicate Account,First account,Asset,1002
+Duplicate Account,Second account with same name,Revenue,4002"""
+            
+            files = {'file': ('test_duplicates.csv', csv_content, 'text/csv')}
+            data = {'company_id': self.test_company_id}
+            
+            response = self.session.post(f"{BASE_URL}/accounts/upload-template", files=files, data=data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Should create first account but error on second
+                if (data.get("success") == True and 
+                    data.get("created_accounts") == 1 and
+                    len(data.get("errors", [])) >= 1):
+                    
+                    # Clean up created account
+                    for account in data.get("accounts", []):
+                        try:
+                            self.session.delete(f"{BASE_URL}/finance/accounts/{account['id']}")
+                        except:
+                            pass
+                    
+                    self.log_result("Upload Accounts Template Duplicate", True, "Duplicate validation working correctly")
+                    return True
+                else:
+                    self.log_result("Upload Accounts Template Duplicate", False, "Duplicate validation not working", data)
+                    return False
+            else:
+                self.log_result("Upload Accounts Template Duplicate", False, f"Upload failed with status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Upload Accounts Template Duplicate", False, f"Error: {str(e)}")
+            return False
+
+    def test_upload_accounts_template_invalid_csv(self):
+        """Test account template upload with invalid CSV format"""
+        if not self.test_company_id:
+            self.log_result("Upload Accounts Template Invalid CSV", False, "No test company ID available")
+            return False
+        
+        try:
+            # Create invalid CSV (missing required fields)
+            csv_content = """account_name,description
+Missing Type Account,Account without type field"""
+            
+            files = {'file': ('test_invalid.csv', csv_content, 'text/csv')}
+            data = {'company_id': self.test_company_id}
+            
+            response = self.session.post(f"{BASE_URL}/accounts/upload-template", files=files, data=data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Should have errors for missing required fields
+                if (data.get("success") == True and 
+                    data.get("created_accounts") == 0 and
+                    len(data.get("errors", [])) >= 1):
+                    self.log_result("Upload Accounts Template Invalid CSV", True, "Invalid CSV validation working correctly")
+                    return True
+                else:
+                    self.log_result("Upload Accounts Template Invalid CSV", False, "Invalid CSV validation not working", data)
+                    return False
+            else:
+                self.log_result("Upload Accounts Template Invalid CSV", False, f"Upload failed with status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Upload Accounts Template Invalid CSV", False, f"Error: {str(e)}")
+            return False
+
+    def test_download_cashflows_template(self):
+        """Test GET /templates/cashflows/download"""
+        try:
+            response = self.session.get(f"{BASE_URL}/templates/cashflows/download")
+            
+            if response.status_code == 200:
+                # Check content type
+                if response.headers.get('content-type') == 'text/csv; charset=utf-8':
+                    # Check content
+                    content = response.text
+                    if 'invoice_id,accrual_date,cashflow_date,account_name,supplier_name,description,payment_method,amount,expense_type' in content:
+                        self.log_result("Download Cashflows Template", True, "CSV template downloaded successfully")
+                        return True
+                    else:
+                        self.log_result("Download Cashflows Template", False, "CSV template missing expected headers")
+                        return False
+                else:
+                    self.log_result("Download Cashflows Template", False, f"Wrong content type: {response.headers.get('content-type')}")
+                    return False
+            else:
+                self.log_result("Download Cashflows Template", False, f"Request failed with status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Download Cashflows Template", False, f"Error: {str(e)}")
+            return False
+
+    def test_upload_cashflows_template(self):
+        """Test POST /cashflows/upload-template"""
+        if not self.test_company_id:
+            self.log_result("Upload Cashflows Template", False, "No test company ID available")
+            return False
+        
+        try:
+            # First create test accounts that will be referenced in cash flows
+            test_accounts = [
+                {"code": "6001", "name": "Test Office Supplies", "account_type": "Expense"},
+                {"code": "1501", "name": "Test Equipment", "account_type": "Asset"},
+                {"code": "1000", "name": "Cash", "account_type": "Asset"}  # Cash account needed for journal entries
+            ]
+            
+            created_account_ids = []
+            for acc_data in test_accounts:
+                account_request = {
+                    "company_id": self.test_company_id,
+                    "code": acc_data["code"],
+                    "name": acc_data["name"],
+                    "account_type": acc_data["account_type"]
+                }
+                response = self.session.post(f"{BASE_URL}/finance/accounts", json=account_request)
+                if response.status_code == 200:
+                    created_account_ids.append(response.json()["id"])
+            
+            # Create test CSV content
+            csv_content = """invoice_id,accrual_date,cashflow_date,account_name,supplier_name,description,payment_method,amount,expense_type
+INV-TEST-001,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Test Office Supplies,Test Supplier,Office supplies for testing,cash,150.50,expense_pl
+INV-TEST-002,2024-01-16T00:00:00Z,2024-01-20T00:00:00Z,Test Equipment,Dell Computer,Computer purchase for testing,check,2500.00,capitalize_bs"""
+            
+            files = {'file': ('test_cashflows.csv', csv_content, 'text/csv')}
+            data = {'company_id': self.test_company_id}
+            
+            response = self.session.post(f"{BASE_URL}/cashflows/upload-template", files=files, data=data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("success") == True and 
+                    data.get("created_cashflows") == 2 and
+                    data.get("created_journal_entries") == 2):
+                    
+                    # Clean up created accounts
+                    for account_id in created_account_ids:
+                        try:
+                            self.session.delete(f"{BASE_URL}/finance/accounts/{account_id}")
+                        except:
+                            pass
+                    
+                    self.log_result("Upload Cashflows Template", True, "Cash flows and journal entries created successfully")
+                    return True
+                else:
+                    self.log_result("Upload Cashflows Template", False, "Unexpected response format", data)
+                    return False
+            else:
+                # Clean up accounts on failure
+                for account_id in created_account_ids:
+                    try:
+                        self.session.delete(f"{BASE_URL}/finance/accounts/{account_id}")
+                    except:
+                        pass
+                
+                self.log_result("Upload Cashflows Template", False, f"Upload failed with status {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_result("Upload Cashflows Template", False, f"Error: {str(e)}")
+            return False
+
+    def test_upload_cashflows_template_missing_account(self):
+        """Test cash flows upload with missing account reference"""
+        if not self.test_company_id:
+            self.log_result("Upload Cashflows Missing Account", False, "No test company ID available")
+            return False
+        
+        try:
+            # Create CSV with non-existent account
+            csv_content = """invoice_id,accrual_date,cashflow_date,account_name,supplier_name,description,payment_method,amount,expense_type
+INV-TEST-003,2024-01-15T00:00:00Z,2024-01-15T00:00:00Z,Non Existent Account,Test Supplier,Test transaction,cash,100.00,expense_pl"""
+            
+            files = {'file': ('test_missing_account.csv', csv_content, 'text/csv')}
+            data = {'company_id': self.test_company_id}
+            
+            response = self.session.post(f"{BASE_URL}/cashflows/upload-template", files=files, data=data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                # Should have errors for missing account
+                if (data.get("success") == True and 
+                    data.get("created_cashflows") == 0 and
+                    len(data.get("errors", [])) >= 1):
+                    self.log_result("Upload Cashflows Missing Account", True, "Missing account validation working correctly")
+                    return True
+                else:
+                    self.log_result("Upload Cashflows Missing Account", False, "Missing account validation not working", data)
+                    return False
+            else:
+                self.log_result("Upload Cashflows Missing Account", False, f"Upload failed with status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Upload Cashflows Missing Account", False, f"Error: {str(e)}")
+            return False
+
+    def test_upload_bank_statement(self):
+        """Test POST /bank-statements/upload"""
+        if not self.test_company_id:
+            self.log_result("Upload Bank Statement", False, "No test company ID available")
+            return False
+        
+        try:
+            # Create test CSV content
+            csv_content = """date,description,amount,type
+2024-01-15T00:00:00Z,Customer Payment,1500.00,credit
+2024-01-16T00:00:00Z,Office Rent Payment,-800.00,debit
+2024-01-17T00:00:00Z,Utility Bill,-150.00,debit"""
+            
+            files = {'file': ('test_bank_statement.csv', csv_content, 'text/csv')}
+            data = {'company_id': self.test_company_id}
+            
+            response = self.session.post(f"{BASE_URL}/bank-statements/upload", files=files, data=data)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("success") == True and 
+                    data.get("transactions_count") == 3 and
+                    "bank_statement" in data):
+                    
+                    self.bank_statement_id = data["bank_statement"]["id"]  # Store for later tests
+                    self.log_result("Upload Bank Statement", True, "Bank statement uploaded and parsed successfully")
+                    return True
+                else:
+                    self.log_result("Upload Bank Statement", False, "Unexpected response format", data)
+                    return False
+            else:
+                self.log_result("Upload Bank Statement", False, f"Upload failed with status {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_result("Upload Bank Statement", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_bank_statements(self):
+        """Test GET /bank-statements"""
+        try:
+            response = self.session.get(f"{BASE_URL}/bank-statements")
+            
+            if response.status_code == 200:
+                statements = response.json()
+                if isinstance(statements, list):
+                    self.log_result("Get Bank Statements", True, f"Retrieved {len(statements)} bank statements")
+                    return True
+                else:
+                    self.log_result("Get Bank Statements", False, "Response is not a list")
+                    return False
+            else:
+                self.log_result("Get Bank Statements", False, f"Request failed with status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Get Bank Statements", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_bank_transactions(self):
+        """Test GET /bank-statements/{id}/transactions"""
+        if not hasattr(self, 'bank_statement_id') or not self.bank_statement_id:
+            self.log_result("Get Bank Transactions", False, "No bank statement ID available")
+            return False
+        
+        try:
+            response = self.session.get(f"{BASE_URL}/bank-statements/{self.bank_statement_id}/transactions")
+            
+            if response.status_code == 200:
+                transactions = response.json()
+                if isinstance(transactions, list) and len(transactions) > 0:
+                    # Store transaction IDs for categorization test
+                    self.bank_transaction_ids = [t["id"] for t in transactions]
+                    self.log_result("Get Bank Transactions", True, f"Retrieved {len(transactions)} transactions")
+                    return True
+                else:
+                    self.log_result("Get Bank Transactions", False, "No transactions found or invalid format")
+                    return False
+            else:
+                self.log_result("Get Bank Transactions", False, f"Request failed with status {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("Get Bank Transactions", False, f"Error: {str(e)}")
+            return False
+
+    def test_categorize_bank_transactions(self):
+        """Test POST /bank-transactions/categorize"""
+        if not hasattr(self, 'bank_transaction_ids') or not self.bank_transaction_ids:
+            self.log_result("Categorize Bank Transactions", False, "No bank transaction IDs available")
+            return False
+        
+        try:
+            # First create test accounts for categorization
+            test_accounts = [
+                {"code": "4000", "name": "Sales Revenue", "account_type": "Revenue"},
+                {"code": "6100", "name": "Rent Expense", "account_type": "Expense"},
+                {"code": "6200", "name": "Utilities Expense", "account_type": "Expense"}
+            ]
+            
+            created_account_ids = []
+            for acc_data in test_accounts:
+                account_request = {
+                    "company_id": self.test_company_id,
+                    "code": acc_data["code"],
+                    "name": acc_data["name"],
+                    "account_type": acc_data["account_type"]
+                }
+                response = self.session.post(f"{BASE_URL}/finance/accounts", json=account_request)
+                if response.status_code == 200:
+                    created_account_ids.append(response.json()["id"])
+            
+            if len(created_account_ids) < 3:
+                self.log_result("Categorize Bank Transactions", False, "Failed to create test accounts")
+                return False
+            
+            # Create categorizations
+            categorizations = [
+                {
+                    "transaction_id": self.bank_transaction_ids[0],
+                    "account_id": created_account_ids[0],  # Revenue account
+                    "category": "Customer Payment",
+                    "notes": "Payment from customer"
+                },
+                {
+                    "transaction_id": self.bank_transaction_ids[1],
+                    "account_id": created_account_ids[1],  # Rent expense
+                    "category": "Rent",
+                    "notes": "Monthly office rent"
+                },
+                {
+                    "transaction_id": self.bank_transaction_ids[2],
+                    "account_id": created_account_ids[2],  # Utilities expense
+                    "category": "Utilities",
+                    "notes": "Monthly utility bill"
+                }
+            ]
+            
+            response = self.session.post(f"{BASE_URL}/bank-transactions/categorize", json=categorizations)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("success") == True and 
+                    data.get("updated_transactions") == 3):
+                    
+                    # Clean up created accounts
+                    for account_id in created_account_ids:
+                        try:
+                            self.session.delete(f"{BASE_URL}/finance/accounts/{account_id}")
+                        except:
+                            pass
+                    
+                    self.log_result("Categorize Bank Transactions", True, "Bank transactions categorized successfully")
+                    return True
+                else:
+                    self.log_result("Categorize Bank Transactions", False, "Unexpected response format", data)
+                    return False
+            else:
+                # Clean up accounts on failure
+                for account_id in created_account_ids:
+                    try:
+                        self.session.delete(f"{BASE_URL}/finance/accounts/{account_id}")
+                    except:
+                        pass
+                
+                self.log_result("Categorize Bank Transactions", False, f"Categorization failed with status {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_result("Categorize Bank Transactions", False, f"Error: {str(e)}")
+            return False
+
+    def test_create_journal_entries_from_bank_transactions(self):
+        """Test POST /bank-transactions/{statement_id}/create-journal-entries"""
+        if not hasattr(self, 'bank_statement_id') or not self.bank_statement_id:
+            self.log_result("Create Journal Entries from Bank", False, "No bank statement ID available")
+            return False
+        
+        try:
+            # First ensure we have a cash account
+            cash_account_request = {
+                "company_id": self.test_company_id,
+                "code": "1000",
+                "name": "Cash",
+                "account_type": "Asset"
+            }
+            cash_response = self.session.post(f"{BASE_URL}/finance/accounts", json=cash_account_request)
+            cash_account_id = None
+            if cash_response.status_code == 200:
+                cash_account_id = cash_response.json()["id"]
+            
+            response = self.session.post(f"{BASE_URL}/bank-transactions/{self.bank_statement_id}/create-journal-entries")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if (data.get("success") == True and 
+                    data.get("created_entries") > 0):
+                    
+                    # Clean up cash account
+                    if cash_account_id:
+                        try:
+                            self.session.delete(f"{BASE_URL}/finance/accounts/{cash_account_id}")
+                        except:
+                            pass
+                    
+                    self.log_result("Create Journal Entries from Bank", True, f"Created {data['created_entries']} journal entries from bank transactions")
+                    return True
+                else:
+                    self.log_result("Create Journal Entries from Bank", False, "Unexpected response format", data)
+                    return False
+            else:
+                # Clean up cash account on failure
+                if cash_account_id:
+                    try:
+                        self.session.delete(f"{BASE_URL}/finance/accounts/{cash_account_id}")
+                    except:
+                        pass
+                
+                self.log_result("Create Journal Entries from Bank", False, f"Journal entry creation failed with status {response.status_code}", response.text)
+                return False
+        except Exception as e:
+            self.log_result("Create Journal Entries from Bank", False, f"Error: {str(e)}")
+            return False
+
+    def test_unauthorized_csv_access(self):
+        """Test CSV endpoints without authentication"""
+        try:
+            # Remove auth header temporarily
+            original_headers = self.session.headers.copy()
+            if "Authorization" in self.session.headers:
+                del self.session.headers["Authorization"]
+            
+            # Test accounts template download without auth
+            response = self.session.get(f"{BASE_URL}/templates/accounts/download")
+            
+            # Restore headers
+            self.session.headers.update(original_headers)
+            
+            if response.status_code == 401:
+                self.log_result("Unauthorized CSV Access", True, "Correctly returned 401 for unauthorized CSV request")
+                return True
+            else:
+                self.log_result("Unauthorized CSV Access", False, f"Expected 401, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Unauthorized CSV Access", False, f"Error: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests"""
