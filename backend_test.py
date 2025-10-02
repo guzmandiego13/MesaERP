@@ -2037,9 +2037,11 @@ Test Expense Account {timestamp},Test expense account for CSV import,Expense,600
         
         try:
             # Create CSV with duplicate account names
-            csv_content = """account_name,description,account_type,account_code
-Duplicate Account,First account,Asset,1002
-Duplicate Account,Second account with same name,Revenue,4002"""
+            import time
+            timestamp = str(int(time.time()))
+            csv_content = f"""account_name,description,account_type,account_code
+Duplicate Account {timestamp},First account,Asset,1002
+Duplicate Account {timestamp},Second account with same name,Revenue,4002"""
             
             files = {'file': ('test_duplicates.csv', csv_content, 'text/csv')}
             
