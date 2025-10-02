@@ -1247,6 +1247,712 @@ class BackendTester:
         except Exception as e:
             self.log_result("Get BUs Includes Parent Subsidiary Name", False, f"Error: {str(e)}")
             return False
+
+    # ============================================================================
+    # BUSINESS UNIT SOFT DELETE TESTS
+    # ============================================================================
+
+    def test_business_unit_soft_delete(self):
+        """Test business unit soft delete endpoint"""
+        try:
+            # Create a business unit for soft delete test
+            if not self.test_company_id:
+                self.log_result("BU Soft Delete", False, "No company ID available for BU creation")
+                return False
+            
+            bu_data = {
+                "company_id": self.test_company_id,
+                "name": "BU for Soft Delete Test",
+                "code": "BU-SOFT-DEL-TEST"
+            }
+            response = self.session.post(f"{BASE_URL}/business-units", json=bu_data)
+            
+            if response.status_code != 200:
+                self.log_result("BU Soft Delete", False, "Failed to create BU for soft delete test")
+                return False
+            
+            bu = response.json()
+            bu_id = bu["id"]
+            
+            # Soft delete the business unit
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_id}/soft-delete")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") == True and "deleted_at" in data and "restoration_deadline" in data:
+                    self.log_result("BU Soft Delete", True, "Business unit soft deleted successfully with backup")
+                    return True
+                else:
+                    self.log_result("BU Soft Delete", False, "Soft delete response missing required fields", data)
+                    return False
+            else:
+                self.log_result("BU Soft Delete", False, f"Soft delete failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("BU Soft Delete", False, f"Error: {str(e)}")
+            return False
+
+    def test_business_unit_soft_delete_with_locations(self):
+        """Test business unit soft delete validation when BU has locations"""
+        try:
+            # Get locations to check if any are associated with business units
+            response = self.session.get(f"{BASE_URL}/locations")
+            if response.status_code != 200:
+                self.log_result("BU Soft Delete with Locations", False, "Failed to get locations")
+                return False
+            
+            locations = response.json()
+            bu_with_locations = None
+            
+            # Find a BU that has locations
+            for location in locations:
+                if location.get("business_unit_id"):
+                    bu_with_locations = location["business_unit_id"]
+                    break
+            
+            if not bu_with_locations:
+                self.log_result("BU Soft Delete with Locations", True, "No business units with locations found - validation test skipped")
+                return True
+            
+            # Try to soft delete BU with locations (should fail)
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_with_locations}/soft-delete")
+            
+            if response.status_code == 400:
+                self.log_result("BU Soft Delete with Locations", True, "Correctly prevented soft deletion of BU with locations")
+                return True
+            else:
+                self.log_result("BU Soft Delete with Locations", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("BU Soft Delete with Locations", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_business_units_excludes_soft_deleted(self):
+        """Test that GET /business-units excludes soft-deleted business units"""
+        try:
+            # Get initial BU count
+            response = self.session.get(f"{BASE_URL}/business-units")
+            if response.status_code != 200:
+                self.log_result("Get BUs Excludes Soft Deleted", False, "Failed to get business units")
+                return False
+            
+            initial_bus = response.json()
+            initial_count = len(initial_bus)
+            
+            # Create a business unit for soft delete test
+            if not self.test_company_id:
+                self.log_result("Get BUs Excludes Soft Deleted", False, "No company ID available")
+                return False
+            
+            bu_data = {
+                "company_id": self.test_company_id,
+                "name": "BU to Hide After Delete",
+                "code": "BU-HIDE-TEST"
+            }
+            response = self.session.post(f"{BASE_URL}/business-units", json=bu_data)
+            
+            if response.status_code != 200:
+                self.log_result("Get BUs Excludes Soft Deleted", False, "Failed to create test BU")
+                return False
+            
+            bu = response.json()
+            bu_id = bu["id"]
+            
+            # Verify BU appears in list
+            response = self.session.get(f"{BASE_URL}/business-units")
+            bus_after_create = response.json()
+            
+            if len(bus_after_create) != initial_count + 1:
+                self.log_result("Get BUs Excludes Soft Deleted", False, "BU not found in list after creation")
+                return False
+            
+            # Soft delete the business unit
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("Get BUs Excludes Soft Deleted", False, "Failed to soft delete BU")
+                return False
+            
+            # Verify BU no longer appears in list
+            response = self.session.get(f"{BASE_URL}/business-units")
+            bus_after_delete = response.json()
+            
+            if len(bus_after_delete) == initial_count:
+                self.log_result("Get BUs Excludes Soft Deleted", True, "Soft-deleted BU correctly excluded from business units list")
+                return True
+            else:
+                self.log_result("Get BUs Excludes Soft Deleted", False, f"Expected {initial_count} BUs, got {len(bus_after_delete)}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get BUs Excludes Soft Deleted", False, f"Error: {str(e)}")
+            return False
+
+    def test_get_deleted_business_units(self):
+        """Test GET /business-units/deleted endpoint"""
+        try:
+            # Create a business unit for soft delete test
+            if not self.test_company_id:
+                self.log_result("Get Deleted BUs", False, "No company ID available")
+                return False
+            
+            bu_data = {
+                "company_id": self.test_company_id,
+                "name": "BU for Deleted List Test",
+                "code": "BU-DEL-LIST-TEST"
+            }
+            response = self.session.post(f"{BASE_URL}/business-units", json=bu_data)
+            
+            if response.status_code != 200:
+                self.log_result("Get Deleted BUs", False, "Failed to create test BU")
+                return False
+            
+            bu = response.json()
+            bu_id = bu["id"]
+            bu_name = bu["name"]
+            
+            # Soft delete the business unit
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("Get Deleted BUs", False, "Failed to soft delete BU")
+                return False
+            
+            # Get deleted business units list
+            response = self.session.get(f"{BASE_URL}/business-units/deleted")
+            
+            if response.status_code == 200:
+                deleted_bus = response.json()
+                
+                # Find our deleted BU in the list
+                found_bu = None
+                for deleted_bu in deleted_bus:
+                    if deleted_bu["id"] == bu_id:
+                        found_bu = deleted_bu
+                        break
+                
+                if found_bu:
+                    # Verify required fields are present
+                    required_fields = ["id", "name", "deleted_at", "restoration_deadline", "days_remaining", "company_name"]
+                    missing_fields = [field for field in required_fields if field not in found_bu]
+                    
+                    if not missing_fields:
+                        self.log_result("Get Deleted BUs", True, "Deleted BU found with all required restoration info")
+                        return True
+                    else:
+                        self.log_result("Get Deleted BUs", False, f"Missing fields in deleted BU: {missing_fields}")
+                        return False
+                else:
+                    self.log_result("Get Deleted BUs", False, "Soft-deleted BU not found in deleted BUs list")
+                    return False
+            else:
+                self.log_result("Get Deleted BUs", False, f"Failed to get deleted BUs: {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Get Deleted BUs", False, f"Error: {str(e)}")
+            return False
+
+    def test_restore_business_unit(self):
+        """Test business unit restoration endpoint"""
+        try:
+            # Create a business unit for restore test
+            if not self.test_company_id:
+                self.log_result("Restore BU", False, "No company ID available")
+                return False
+            
+            bu_data = {
+                "company_id": self.test_company_id,
+                "name": "BU for Restore Test",
+                "code": "BU-RESTORE-TEST"
+            }
+            response = self.session.post(f"{BASE_URL}/business-units", json=bu_data)
+            
+            if response.status_code != 200:
+                self.log_result("Restore BU", False, "Failed to create test BU")
+                return False
+            
+            bu = response.json()
+            bu_id = bu["id"]
+            
+            # Soft delete the business unit
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("Restore BU", False, "Failed to soft delete BU")
+                return False
+            
+            # Restore the business unit
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_id}/restore")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") == True:
+                    # Verify BU appears in active BUs list again
+                    response = self.session.get(f"{BASE_URL}/business-units")
+                    if response.status_code == 200:
+                        bus = response.json()
+                        restored_bu = None
+                        for bu_item in bus:
+                            if bu_item["id"] == bu_id:
+                                restored_bu = bu_item
+                                break
+                        
+                        if restored_bu and restored_bu.get("is_active") == True:
+                            # Clean up
+                            self.session.delete(f"{BASE_URL}/business-units/{bu_id}")
+                            self.log_result("Restore BU", True, "Business unit restored successfully and appears in active list")
+                            return True
+                        else:
+                            self.log_result("Restore BU", False, "Restored BU not found in active BUs list")
+                            return False
+                    else:
+                        self.log_result("Restore BU", False, "Failed to verify restoration")
+                        return False
+                else:
+                    self.log_result("Restore BU", False, "Restore response missing success flag", data)
+                    return False
+            else:
+                self.log_result("Restore BU", False, f"Restore failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("Restore BU", False, f"Error: {str(e)}")
+            return False
+
+    def test_restore_non_deleted_business_unit(self):
+        """Test restore endpoint on non-deleted business unit"""
+        try:
+            if not self.test_bu_id:
+                self.log_result("Restore Non-Deleted BU", False, "No test BU ID available")
+                return False
+            
+            # Try to restore a BU that's not deleted
+            response = self.session.post(f"{BASE_URL}/business-units/{self.test_bu_id}/restore")
+            
+            if response.status_code == 400:
+                self.log_result("Restore Non-Deleted BU", True, "Correctly returned 400 for non-deleted BU")
+                return True
+            else:
+                self.log_result("Restore Non-Deleted BU", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("Restore Non-Deleted BU", False, f"Error: {str(e)}")
+            return False
+
+    def test_business_unit_soft_delete_already_deleted(self):
+        """Test soft delete on already deleted business unit"""
+        try:
+            # Create a business unit for test
+            if not self.test_company_id:
+                self.log_result("BU Soft Delete Already Deleted", False, "No company ID available")
+                return False
+            
+            bu_data = {
+                "company_id": self.test_company_id,
+                "name": "BU for Double Delete Test",
+                "code": "BU-DOUBLE-DEL-TEST"
+            }
+            response = self.session.post(f"{BASE_URL}/business-units", json=bu_data)
+            
+            if response.status_code != 200:
+                self.log_result("BU Soft Delete Already Deleted", False, "Failed to create test BU")
+                return False
+            
+            bu = response.json()
+            bu_id = bu["id"]
+            
+            # Soft delete the business unit
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_id}/soft-delete")
+            
+            if response.status_code != 200:
+                self.log_result("BU Soft Delete Already Deleted", False, "Failed to soft delete BU")
+                return False
+            
+            # Try to soft delete again
+            response = self.session.post(f"{BASE_URL}/business-units/{bu_id}/soft-delete")
+            
+            if response.status_code == 400:
+                self.log_result("BU Soft Delete Already Deleted", True, "Correctly prevented double soft delete")
+                return True
+            else:
+                self.log_result("BU Soft Delete Already Deleted", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("BU Soft Delete Already Deleted", False, f"Error: {str(e)}")
+            return False
+
+    def test_business_unit_soft_delete_invalid_id(self):
+        """Test soft delete with invalid business unit ID"""
+        try:
+            response = self.session.post(f"{BASE_URL}/business-units/invalid-id/soft-delete")
+            
+            if response.status_code == 404:
+                self.log_result("BU Soft Delete Invalid ID", True, "Correctly returned 404 for invalid BU ID")
+                return True
+            else:
+                self.log_result("BU Soft Delete Invalid ID", False, f"Expected 404, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("BU Soft Delete Invalid ID", False, f"Error: {str(e)}")
+            return False
+
+    def test_business_unit_restore_invalid_id(self):
+        """Test restore with invalid business unit ID"""
+        try:
+            response = self.session.post(f"{BASE_URL}/business-units/invalid-id/restore")
+            
+            if response.status_code == 404:
+                self.log_result("BU Restore Invalid ID", True, "Correctly returned 404 for invalid BU ID")
+                return True
+            else:
+                self.log_result("BU Restore Invalid ID", False, f"Expected 404, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("BU Restore Invalid ID", False, f"Error: {str(e)}")
+            return False
+
+    # ============================================================================
+    # ENHANCED USER MANAGEMENT TESTS
+    # ============================================================================
+
+    def test_user_update_with_new_fields(self):
+        """Test user update with new fields (name, email, role, permissions)"""
+        try:
+            # Create a test user first
+            user_data = {
+                "email": "testuser@example.com",
+                "password": "testpass123",
+                "name": "Test User",
+                "role": "Analyst",
+                "permissions": {
+                    "view_dashboard": True,
+                    "view_reports": False,
+                    "export_data": False,
+                    "view_finances": False,
+                    "manage_accounts_ledger": False,
+                    "create_journal_entries": False,
+                    "approve_journal_entries": False,
+                    "manage_information": False,
+                    "manage_companies": False,
+                    "manage_business_units": False,
+                    "view_users": False,
+                    "manage_users": False,
+                    "manage_settings": False,
+                    "manage_api_keys": False,
+                    "manage_branding": False,
+                    "view_inventory": False,
+                    "manage_inventory": False,
+                    "manage_procurement": False,
+                    "full_access": False
+                }
+            }
+            
+            response = self.session.post(f"{BASE_URL}/users", json=user_data)
+            
+            if response.status_code != 200:
+                self.log_result("User Update New Fields", False, "Failed to create test user")
+                return False
+            
+            user = response.json()
+            user_id = user["id"]
+            
+            # Update user with new fields
+            update_data = {
+                "name": "Updated Test User",
+                "email": "updateduser@example.com",
+                "role": "Finance",
+                "permissions": {
+                    "view_dashboard": True,
+                    "view_reports": True,
+                    "export_data": True,
+                    "view_finances": True,
+                    "manage_accounts_ledger": True,
+                    "create_journal_entries": False,
+                    "approve_journal_entries": False,
+                    "manage_information": False,
+                    "manage_companies": False,
+                    "manage_business_units": False,
+                    "view_users": False,
+                    "manage_users": False,
+                    "manage_settings": False,
+                    "manage_api_keys": False,
+                    "manage_branding": False,
+                    "view_inventory": False,
+                    "manage_inventory": False,
+                    "manage_procurement": False,
+                    "full_access": False
+                },
+                "location_ids": []
+            }
+            
+            response = self.session.put(f"{BASE_URL}/users/{user_id}", json=update_data)
+            
+            # Clean up
+            self.session.delete(f"{BASE_URL}/users/{user_id}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") == True:
+                    self.log_result("User Update New Fields", True, "User updated successfully with new fields")
+                    return True
+                else:
+                    self.log_result("User Update New Fields", False, "Update response missing success flag", data)
+                    return False
+            else:
+                self.log_result("User Update New Fields", False, f"Update failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("User Update New Fields", False, f"Error: {str(e)}")
+            return False
+
+    def test_user_email_uniqueness_validation(self):
+        """Test email uniqueness validation during user updates"""
+        try:
+            # Create two test users
+            user1_data = {
+                "email": "user1@example.com",
+                "password": "testpass123",
+                "name": "User One",
+                "role": "Analyst",
+                "permissions": {
+                    "view_dashboard": True,
+                    "view_reports": False,
+                    "export_data": False,
+                    "view_finances": False,
+                    "manage_accounts_ledger": False,
+                    "create_journal_entries": False,
+                    "approve_journal_entries": False,
+                    "manage_information": False,
+                    "manage_companies": False,
+                    "manage_business_units": False,
+                    "view_users": False,
+                    "manage_users": False,
+                    "manage_settings": False,
+                    "manage_api_keys": False,
+                    "manage_branding": False,
+                    "view_inventory": False,
+                    "manage_inventory": False,
+                    "manage_procurement": False,
+                    "full_access": False
+                }
+            }
+            
+            user2_data = {
+                "email": "user2@example.com",
+                "password": "testpass123",
+                "name": "User Two",
+                "role": "Analyst",
+                "permissions": {
+                    "view_dashboard": True,
+                    "view_reports": False,
+                    "export_data": False,
+                    "view_finances": False,
+                    "manage_accounts_ledger": False,
+                    "create_journal_entries": False,
+                    "approve_journal_entries": False,
+                    "manage_information": False,
+                    "manage_companies": False,
+                    "manage_business_units": False,
+                    "view_users": False,
+                    "manage_users": False,
+                    "manage_settings": False,
+                    "manage_api_keys": False,
+                    "manage_branding": False,
+                    "view_inventory": False,
+                    "manage_inventory": False,
+                    "manage_procurement": False,
+                    "full_access": False
+                }
+            }
+            
+            # Create first user
+            response = self.session.post(f"{BASE_URL}/users", json=user1_data)
+            if response.status_code != 200:
+                self.log_result("User Email Uniqueness", False, "Failed to create first test user")
+                return False
+            
+            user1 = response.json()
+            user1_id = user1["id"]
+            
+            # Create second user
+            response = self.session.post(f"{BASE_URL}/users", json=user2_data)
+            if response.status_code != 200:
+                # Clean up first user
+                self.session.delete(f"{BASE_URL}/users/{user1_id}")
+                self.log_result("User Email Uniqueness", False, "Failed to create second test user")
+                return False
+            
+            user2 = response.json()
+            user2_id = user2["id"]
+            
+            # Try to update user2's email to user1's email (should fail)
+            update_data = {
+                "email": "user1@example.com"
+            }
+            
+            response = self.session.put(f"{BASE_URL}/users/{user2_id}", json=update_data)
+            
+            # Clean up both users
+            self.session.delete(f"{BASE_URL}/users/{user1_id}")
+            self.session.delete(f"{BASE_URL}/users/{user2_id}")
+            
+            if response.status_code == 400:
+                self.log_result("User Email Uniqueness", True, "Correctly prevented duplicate email during update")
+                return True
+            else:
+                self.log_result("User Email Uniqueness", False, f"Expected 400, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("User Email Uniqueness", False, f"Error: {str(e)}")
+            return False
+
+    def test_user_permission_updates(self):
+        """Test permission updates with new granular permission model"""
+        try:
+            # Create a test user
+            user_data = {
+                "email": "permissionuser@example.com",
+                "password": "testpass123",
+                "name": "Permission Test User",
+                "role": "Analyst",
+                "permissions": {
+                    "view_dashboard": True,
+                    "view_reports": False,
+                    "export_data": False,
+                    "view_finances": False,
+                    "manage_accounts_ledger": False,
+                    "create_journal_entries": False,
+                    "approve_journal_entries": False,
+                    "manage_information": False,
+                    "manage_companies": False,
+                    "manage_business_units": False,
+                    "view_users": False,
+                    "manage_users": False,
+                    "manage_settings": False,
+                    "manage_api_keys": False,
+                    "manage_branding": False,
+                    "view_inventory": False,
+                    "manage_inventory": False,
+                    "manage_procurement": False,
+                    "full_access": False
+                }
+            }
+            
+            response = self.session.post(f"{BASE_URL}/users", json=user_data)
+            
+            if response.status_code != 200:
+                self.log_result("User Permission Updates", False, "Failed to create test user")
+                return False
+            
+            user = response.json()
+            user_id = user["id"]
+            
+            # Update user with comprehensive permissions (all 17 granular permissions)
+            update_data = {
+                "permissions": {
+                    # Dashboard & Reporting
+                    "view_dashboard": True,
+                    "view_reports": True,
+                    "export_data": True,
+                    
+                    # Financial Management
+                    "view_finances": True,
+                    "manage_accounts_ledger": True,
+                    "create_journal_entries": True,
+                    "approve_journal_entries": True,
+                    
+                    # Company & Business Units
+                    "manage_information": True,
+                    "manage_companies": True,
+                    "manage_business_units": True,
+                    
+                    # User Management
+                    "view_users": True,
+                    "manage_users": True,
+                    
+                    # Settings & Configuration
+                    "manage_settings": True,
+                    "manage_api_keys": True,
+                    "manage_branding": True,
+                    
+                    # Inventory & Operations
+                    "view_inventory": True,
+                    "manage_inventory": True,
+                    "manage_procurement": True,
+                    
+                    # Administrative
+                    "full_access": False
+                }
+            }
+            
+            response = self.session.put(f"{BASE_URL}/users/{user_id}", json=update_data)
+            
+            # Clean up
+            self.session.delete(f"{BASE_URL}/users/{user_id}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success") == True:
+                    self.log_result("User Permission Updates", True, "User permissions updated successfully with all 17 granular permissions")
+                    return True
+                else:
+                    self.log_result("User Permission Updates", False, "Update response missing success flag", data)
+                    return False
+            else:
+                self.log_result("User Permission Updates", False, f"Update failed with status {response.status_code}", response.text)
+                return False
+                
+        except Exception as e:
+            self.log_result("User Permission Updates", False, f"Error: {str(e)}")
+            return False
+
+    def test_user_update_invalid_id(self):
+        """Test user update with invalid user ID"""
+        try:
+            update_data = {"name": "Test Update"}
+            response = self.session.put(f"{BASE_URL}/users/invalid-id", json=update_data)
+            
+            if response.status_code == 404:
+                self.log_result("User Update Invalid ID", True, "Correctly returned 404 for invalid user ID")
+                return True
+            else:
+                self.log_result("User Update Invalid ID", False, f"Expected 404, got {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_result("User Update Invalid ID", False, f"Error: {str(e)}")
+            return False
+
+    def test_user_update_unauthorized_access(self):
+        """Test user update without authentication"""
+        try:
+            # Remove auth header temporarily
+            original_headers = self.session.headers.copy()
+            if "Authorization" in self.session.headers:
+                del self.session.headers["Authorization"]
+            
+            # Test user update without auth
+            response = self.session.put(f"{BASE_URL}/users/test-id", json={"name": "test"})
+            
+            # Restore headers
+            self.session.headers.update(original_headers)
+            
+            if response.status_code == 401:
+                self.log_result("User Update Unauthorized", True, "Correctly returned 401 for unauthorized user update")
+                return True
+            else:
+                self.log_result("User Update Unauthorized", False, f"Expected 401, got {response.status_code}")
+                return False
+                
+        except Exception as e:
+            self.log_result("User Update Unauthorized", False, f"Error: {str(e)}")
+            return False
     
     def run_all_tests(self):
         """Run all backend tests"""
