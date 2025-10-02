@@ -97,6 +97,8 @@ class Company(BaseModel):
     accounting_basis: AccountingBasisEnum = AccountingBasisEnum.ACCRUAL
     tax_id: Optional[str] = None
     is_active: bool = True
+    deleted_at: Optional[datetime] = None  # For soft delete
+    backup_data: Optional[dict] = None  # Store backup of related data
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class BusinessUnit(BaseModel):
