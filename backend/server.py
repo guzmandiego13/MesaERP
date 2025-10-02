@@ -2821,16 +2821,6 @@ async def seed_demo_data(current_user: dict = Depends(get_current_user)):
     
     return {"success": True, "message": "Demo data seeded"}
 
-app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # ============================================================================
 # CSV IMPORT & TEMPLATE ENDPOINTS
 # ============================================================================
