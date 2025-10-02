@@ -1955,6 +1955,155 @@ async def delete_business_unit(
     
     return {"success": True, "message": "Business unit deleted"}
 
+@api_router.post("/business-units/{bu_id}/soft-delete")
+async def soft_delete_business_unit(
+    bu_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Soft delete a business unit with backup for 6 months"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get the business unit
+    business_unit = await db.business_units.find_one({"id": bu_id, "tenant_id": tenant_id})
+    if not business_unit:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    if business_unit.get("deleted_at"):
+        raise HTTPException(status_code=400, detail="Business unit is already deleted")
+    
+    # Check if BU has locations
+    locations = await db.locations.count_documents({
+        "tenant_id": tenant_id,
+        "business_unit_id": bu_id
+    })
+    
+    if locations > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete business unit with {locations} locations. Reassign locations first."
+        )
+    
+    # Create backup data
+    backup_data = {
+        "locations": [],
+        "journal_entries": []
+    }
+    
+    # Collect related data for backup
+    backup_data["locations"] = await db.locations.find({"business_unit_id": bu_id}).to_list(None)
+    backup_data["journal_entries"] = await db.journal_entries.find({"business_unit_id": bu_id}).to_list(None)
+    
+    # Remove MongoDB ObjectIds from backup data
+    for collection_data in backup_data.values():
+        for item in collection_data:
+            item.pop("_id", None)
+    
+    # Soft delete the business unit
+    delete_time = datetime.now(timezone.utc)
+    result = await db.business_units.update_one(
+        {"id": bu_id, "tenant_id": tenant_id},
+        {
+            "$set": {
+                "deleted_at": delete_time,
+                "backup_data": backup_data,
+                "is_active": False
+            }
+        }
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    # Deactivate related data (but keep it for potential restoration)
+    await db.locations.update_many({"business_unit_id": bu_id}, {"$set": {"is_active": False}})
+    
+    return {
+        "success": True, 
+        "message": "Business unit soft deleted successfully. Data backed up for 6 months.",
+        "deleted_at": delete_time,
+        "restoration_deadline": delete_time.replace(month=delete_time.month + 6) if delete_time.month <= 6 else delete_time.replace(year=delete_time.year + 1, month=delete_time.month - 6)
+    }
+
+@api_router.post("/business-units/{bu_id}/restore")
+async def restore_business_unit(
+    bu_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Restore a soft-deleted business unit"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get the deleted business unit
+    business_unit = await db.business_units.find_one({"id": bu_id, "tenant_id": tenant_id})
+    if not business_unit:
+        raise HTTPException(status_code=404, detail="Business unit not found")
+    
+    if not business_unit.get("deleted_at"):
+        raise HTTPException(status_code=400, detail="Business unit is not deleted")
+    
+    # Check if restoration deadline has passed (6 months)
+    delete_time = business_unit["deleted_at"]
+    # Ensure delete_time is timezone-aware
+    if delete_time.tzinfo is None:
+        delete_time = delete_time.replace(tzinfo=timezone.utc)
+    
+    restoration_deadline = delete_time.replace(month=delete_time.month + 6) if delete_time.month <= 6 else delete_time.replace(year=delete_time.year + 1, month=delete_time.month - 6)
+    
+    if datetime.now(timezone.utc) > restoration_deadline:
+        raise HTTPException(status_code=400, detail="Restoration deadline has passed. Business unit data may have been permanently deleted.")
+    
+    # Restore the business unit
+    await db.business_units.update_one(
+        {"id": bu_id, "tenant_id": tenant_id},
+        {
+            "$set": {"is_active": True},
+            "$unset": {"deleted_at": "", "backup_data": ""}
+        }
+    )
+    
+    # Reactivate related data
+    await db.locations.update_many({"business_unit_id": bu_id}, {"$set": {"is_active": True}})
+    
+    return {"success": True, "message": "Business unit restored successfully"}
+
+@api_router.get("/business-units/deleted")
+async def get_deleted_business_units(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all soft-deleted business units that can be restored"""
+    tenant_id = current_user["tenant_id"]
+    
+    # Get deleted business units that are still within restoration period
+    six_months_ago = datetime.now(timezone.utc) - timedelta(days=180)
+    
+    deleted_bus = await db.business_units.find({
+        "tenant_id": tenant_id,
+        "deleted_at": {"$exists": True, "$gte": six_months_ago}
+    }).to_list(None)
+    
+    # Clean up and add restoration info
+    for bu in deleted_bus:
+        bu.pop("_id", None)
+        bu.pop("backup_data", None)  # Don't send backup data in list
+        
+        # Add restoration deadline
+        delete_time = bu["deleted_at"]
+        # Ensure delete_time is timezone-aware
+        if delete_time.tzinfo is None:
+            delete_time = delete_time.replace(tzinfo=timezone.utc)
+        
+        restoration_deadline = delete_time.replace(month=delete_time.month + 6) if delete_time.month <= 6 else delete_time.replace(year=delete_time.year + 1, month=delete_time.month - 6)
+        bu["restoration_deadline"] = restoration_deadline
+        
+        # Add days remaining
+        days_remaining = (restoration_deadline - datetime.now(timezone.utc)).days
+        bu["days_remaining"] = max(0, days_remaining)
+        
+        # Get company name
+        company = await db.companies.find_one({"id": bu["company_id"]})
+        bu["company_name"] = company["name"] if company else None
+    
+    return deleted_bus
+
 @api_router.get("/business-units/{bu_id}/consolidation")
 async def get_business_unit_consolidation(
     bu_id: str,
