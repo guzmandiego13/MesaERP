@@ -120,6 +120,18 @@ backend:
           agent: "testing"
           comment: "Comprehensive backend testing completed successfully. All 9 tests passed: Company update (PUT /api/companies/{id}) works correctly with name, industry, tax_id, accounting_basis updates. Business unit update (PUT /api/business-units/{id}) works with name, code, description, manager_name updates. Company delete properly validates subsidiaries and prevents deletion when subsidiaries exist. Business unit delete validates locations and prevents deletion when locations exist. Both endpoints handle invalid IDs correctly (404), unauthorized access returns 401, and responses exclude MongoDB _id fields. Cascade deletion works properly for companies and business units without dependencies."
 
+  - task: "Soft delete with backup functionality for companies"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "main"
+          comment: "Added comprehensive soft delete system: POST /api/companies/{id}/soft-delete (6-month backup), POST /api/companies/{id}/restore, GET /api/companies/deleted (list restorable companies). Modified Company model to include deleted_at and backup_data fields. Updated GET /api/companies to exclude soft-deleted companies."
+
 frontend:
   - task: "Inline edit/delete for subsidiaries in Settings page"
     implemented: true
