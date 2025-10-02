@@ -132,6 +132,7 @@ class User(BaseModel):
 class Account(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     tenant_id: str
+    company_id: str  # Each company has its own chart of accounts
     code: str
     name: str
     account_type: AccountTypeEnum
@@ -141,6 +142,8 @@ class Account(BaseModel):
 class JournalEntry(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     tenant_id: str
+    company_id: str
+    business_unit_id: Optional[str] = None  # For BU-level tracking
     location_id: Optional[str] = None
     entry_date: datetime
     description: str
