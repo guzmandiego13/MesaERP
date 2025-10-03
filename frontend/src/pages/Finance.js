@@ -43,6 +43,13 @@ export default function Finance() {
     ]
   });
 
+  // CSV Import state
+  const [bankStatements, setBankStatements] = useState([]);
+  const [selectedBankStatement, setSelectedBankStatement] = useState(null);
+  const [bankTransactions, setBankTransactions] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [showCategorizationDialog, setShowCategorizationDialog] = useState(false);
+
   const token = localStorage.getItem("token");
   const headers = { Authorization: `Bearer ${token}` };
 
