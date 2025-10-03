@@ -585,6 +585,7 @@ export default function Finance() {
           <TabsTrigger value="bs" data-testid="tab-bs">Balance Sheet</TabsTrigger>
           <TabsTrigger value="coa" data-testid="tab-coa">Chart of Accounts</TabsTrigger>
           <TabsTrigger value="journal" data-testid="tab-journal">Journal Entries</TabsTrigger>
+          <TabsTrigger value="csv-imports" data-testid="tab-csv-imports">CSV Imports</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pl">
