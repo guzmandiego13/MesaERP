@@ -56,6 +56,7 @@ export default function Finance() {
   useEffect(() => {
     loadFinanceData();
     loadJournalEntries();
+    loadBankStatements();
   }, [dateRange]);
 
   const loadFinanceData = async () => {
