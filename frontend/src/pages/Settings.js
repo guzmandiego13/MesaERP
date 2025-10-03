@@ -28,14 +28,7 @@ export default function Settings({ company }) {
   const [showDeletedBUsDialog, setShowDeletedBUsDialog] = useState(false);
   const [deletedBusinessUnits, setDeletedBusinessUnits] = useState([]);
 
-  // CSV Import state
-  const [bankStatements, setBankStatements] = useState([]);
-  const [selectedBankStatement, setSelectedBankStatement] = useState(null);
-  const [bankTransactions, setBankTransactions] = useState([]);
-  const [accounts, setAccounts] = useState([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
-  const [showCategorizationDialog, setShowCategorizationDialog] = useState(false);
+  // Remove CSV import state as it's moved to Finance page
   
   const [editingCompany, setEditingCompany] = useState(null);
   const [editingBU, setEditingBU] = useState(null);
