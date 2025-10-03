@@ -882,7 +882,283 @@ export default function Finance() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="csv-imports">
+          <div className="space-y-6">
+            {/* Accounts Template Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Account Setup Template
+                </CardTitle>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold mb-3">Step 1: Download Template</h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Download the accounts template CSV with columns: account_name, description, account_type, account_code
+                      </p>
+                      <Button onClick={downloadAccountsTemplate} variant="outline">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Accounts Template
+                      </Button>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-3">Step 2: Upload Completed Template</h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Upload your completed template to automatically create accounts in the system
+                      </p>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleAccountsTemplateUpload}
+                          className="hidden"
+                          disabled={uploading}
+                        />
+                        <Button variant="default" disabled={uploading} asChild>
+                          <span>
+                            <UploadIcon className="w-4 h-4 mr-2" />
+                            {uploading ? "Uploading..." : "Upload Accounts CSV"}
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                  </div>
+                </CardContent>
+              </CardHeader>
+            </Card>
+
+            {/* Cash Flows Template Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Cash Flows Template
+                </CardTitle>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold mb-3">Step 1: Download Template</h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Template includes: invoice_id, accrual_date, cashflow_date, account_name, supplier_name, description, payment_method, amount, expense_type
+                      </p>
+                      <Button onClick={downloadCashFlowsTemplate} variant="outline">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Cash Flows Template
+                      </Button>
+                    </div>
+                    
+                    <div>
+                      <h4 className="font-semibold mb-3">Step 2: Upload Cash Flows</h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Upload completed template to create journal entries for non-bank transactions
+                      </p>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleCashFlowsTemplateUpload}
+                          className="hidden"
+                          disabled={uploading}
+                        />
+                        <Button variant="default" disabled={uploading} asChild>
+                          <span>
+                            <UploadIcon className="w-4 h-4 mr-2" />
+                            {uploading ? "Uploading..." : "Upload Cash Flows CSV"}
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+                  </div>
+                </CardContent>
+              </CardHeader>
+            </Card>
+
+            {/* Bank Statement Upload Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Upload className="w-5 h-5" />
+                  Bank Statement Upload & Categorization
+                </CardTitle>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold mb-3">Upload Bank Statement</h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        CSV should contain columns: date, description, amount (and optionally type)
+                      </p>
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={handleBankStatementUpload}
+                          className="hidden"
+                          disabled={uploading}
+                        />
+                        <Button disabled={uploading} asChild>
+                          <span>
+                            <UploadIcon className="w-4 h-4 mr-2" />
+                            {uploading ? "Uploading..." : "Upload Bank Statement"}
+                          </span>
+                        </Button>
+                      </label>
+                    </div>
+
+                    {/* Bank Statements List */}
+                    {bankStatements.length > 0 && (
+                      <div className="border rounded-lg p-4">
+                        <h4 className="font-semibold mb-3">Uploaded Bank Statements</h4>
+                        <div className="space-y-2">
+                          {bankStatements.map((statement) => (
+                            <div key={statement.id} className="flex items-center justify-between p-3 border border-slate-200 rounded">
+                              <div>
+                                <h5 className="font-medium">{statement.upload_filename}</h5>
+                                <p className="text-sm text-slate-600">
+                                  {statement.total_transactions} transactions • 
+                                  {statement.categorized_transactions} categorized • 
+                                  Uploaded: {new Date(statement.upload_date).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => loadBankTransactions(statement.id)}
+                                  variant="outline"
+                                >
+                                  Categorize Transactions
+                                </Button>
+                                {statement.categorized_transactions > 0 && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => createJournalEntriesFromBankTransactions(statement.id)}
+                                  >
+                                    Create Journal Entries
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </CardHeader>
+            </Card>
+          </div>
+        </TabsContent>
       </Tabs>
+
+      {/* Bank Transaction Categorization Dialog */}
+      <Dialog open={showCategorizationDialog} onOpenChange={setShowCategorizationDialog}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Categorize Bank Transactions</DialogTitle>
+            <DialogDescription>
+              Assign each transaction to an account for proper financial tracking
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            {bankTransactions.map((transaction) => (
+              <div key={transaction.id} className={`p-4 border rounded-lg ${
+                transaction.is_categorized ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="grid grid-cols-4 gap-4 items-center">
+                  <div>
+                    <p className="font-medium">{new Date(transaction.transaction_date).toLocaleDateString()}</p>
+                    <p className="text-sm text-slate-600">{transaction.description}</p>
+                  </div>
+                  
+                  <div className="text-center">
+                    <span className={`font-bold ${
+                      transaction.transaction_type === 'credit' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.transaction_type === 'credit' ? '+' : '-'}${transaction.amount.toFixed(2)}
+                    </span>
+                    <p className="text-xs text-slate-500 capitalize">{transaction.transaction_type}</p>
+                  </div>
+                  
+                  <div>
+                    {transaction.is_categorized ? (
+                      <div>
+                        <p className="font-medium text-green-700">{transaction.account_name}</p>
+                        {transaction.category && (
+                          <p className="text-sm text-slate-600">{transaction.category}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <select
+                        className="w-full px-3 py-2 border border-slate-300 rounded-md text-sm"
+                        onChange={(e) => {
+                          if (e.target.value) {
+                            const [accountId, accountName] = e.target.value.split('|');
+                            handleTransactionCategorization(
+                              transaction.id,
+                              accountId,
+                              accountName,
+                              ''
+                            );
+                          }
+                        }}
+                        defaultValue=""
+                      >
+                        <option value="">Select Account...</option>
+                        {accounts.map((account) => (
+                          <option key={account.id} value={`${account.id}|${account.name}`}>
+                            {account.name} ({account.account_type})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  
+                  <div className="text-center">
+                    {transaction.is_categorized ? (
+                      <span className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded">
+                        Categorized
+                      </span>
+                    ) : (
+                      <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded">
+                        Pending
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {bankTransactions.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-slate-500">No transactions to categorize</p>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCategorizationDialog(false)}
+            >
+              Close
+            </Button>
+            {bankTransactions.some(t => t.is_categorized) && (
+              <Button 
+                onClick={() => {
+                  createJournalEntriesFromBankTransactions(selectedBankStatement);
+                  setShowCategorizationDialog(false);
+                }}
+              >
+                Create Journal Entries ({bankTransactions.filter(t => t.is_categorized).length} transactions)
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
