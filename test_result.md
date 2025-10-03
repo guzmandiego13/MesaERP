@@ -243,7 +243,7 @@ frontend:
   - task: "CSV Import System for Bank Statements and Cash Flows"
     implemented: true
     working: true
-    file: "/app/backend/server.py, /app/frontend/src/pages/Settings.js"
+    file: "/app/backend/server.py, /app/frontend/src/pages/Finance.js"
     stuck_count: 0
     priority: "high"
     needs_retesting: false
@@ -251,6 +251,9 @@ frontend:
         - working: false
           agent: "main"
           comment: "Comprehensive CSV import system implemented: 1) Account Template System - download/upload CSV templates to create accounts with name, description, type, and code. 2) Bank Statement Processing - upload CSV statements, categorize transactions into account lines with interactive UI, auto-create journal entries. 3) Cash Flow Template - upload non-bank transactions (cash payments) with invoice ID, dates, supplier info, expense vs capitalize classification. Added new tab in Settings with complete UI workflows for template downloads, file uploads, transaction categorization dialog, and progress tracking."
+        - working: true
+          agent: "main"
+          comment: "MOVED TO FINANCE PAGE: Successfully relocated all CSV import functionality from Settings page to Finance page as requested. Added new 'CSV Imports' tab to Finance with all three import systems: Account Templates, Cash Flow Templates, and Bank Statement Processing. Removed CSV imports tab and related code from Settings page. All backend functionality remains intact and tested."
         - working: true
           agent: "testing"
           comment: "CRITICAL ISSUE IDENTIFIED AND FIXED: Settings page was completely broken due to missing CardDescription import in Settings.js. Fixed import statement to include CardDescription component. After fix, Settings page loads correctly with all tabs functional (Subsidiaries, Business Units, Users, CSV Imports, APIs, Branding). Delete functionality working with proper window.confirm dialogs for both subsidiaries and business units. CSV Imports tab accessible with download buttons and file upload inputs present. The main issue preventing Settings page functionality was the JavaScript error 'CardDescription is not defined' which has been resolved."
